@@ -1,0 +1,237 @@
+---
+title: "Load Data and Set Sample"
+author: "Lidia Montero"
+date: \today
+output:
+  pdf_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+  html_document:
+    toc: no
+    toc_depth: '4'
+  word_document:
+    toc: no
+    toc_depth: '4'
+geometry: left=1.9cm,right=1.9cm,top=1.25cm,bottom=1.52cm
+fontsize: 18pt
+subtitle: 'Laboratori 0 - Loading Data'
+classoption: a4paper
+editor_options: 
+  chunk_output_type: console
+---
+
+# Presentation
+## R Markdowns document
+
+This is an R Markdown document. 
+We are showing some examples of GLMz. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. Use * to provide emphasis such as *italics* and **bold**.
+
+Create lists: Unordered * and +     or   ordered   1. 2.  
+
+  1. Item 1
+  2. Item 2
+    + Item 2a
+    + Item 2b
+
+# Header 1
+## Header 2
+
+
+
+# Load Required Packages: to be increased over the course
+
+```{r}
+# Load Required Packages: to be increased over the course
+
+requiredPackages <- c("effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr")
+missingPackages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
+
+if(length(missingPackages)) install.packages(missingPackages)
+lapply(requiredPackages, require, character.only = TRUE)
+
+```
+
+## Select a sample of 5000 records
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+setwd("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS")
+filepath<-"C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS/"
+# green_tripdata_2016-01
+
+df<-read.table(paste0(filepath,"green_tripdata_2016-01.csv"),header=T, sep=",")
+dim(df)
+names(df)
+### Use birthday of 1 member of the group
+set.seed(28061963)
+sam<-as.vector(sort(sample(1:nrow(df),5000)))
+head(df)
+df<-df[sam,]
+summary(df)
+```
+
+## Factors: Levels coding
+
+Now codify properly factors and remove non-informative variables
+```{r}
+names(df)
+df$VendorID<-factor(df$VendorID,labels=c("Mobile","VeriFone"))
+df$Trip_type<-factor(df$Trip_type,labels=c("Street-Hail","Dispatch"))
+df$Payment_type<-factor(df$Payment_type,labels=c("Credit card","Cash","No charge","Dispute"))
+
+df$pickup<-substr(strptime(df$lpep_pickup_datetime, "%Y-%m-%d %H:%M:%S"), 12, 13)
+df$dropoff<-substr(strptime(df$Lpep_dropoff_datetime, "%Y-%m-%d %H:%M:%S"), 12, 13)
+
+save.image("Taxi5000_raw.RData")
+```
+
+## Data Coding and Clearance
+
+Create new variables derived from the original ones, as effective speed, travel time, hour of request, period of request, effective trip distance (in km) and Manhattan distance (km)
+
+```{r}
+summary(df$VendorID)
+# It is a categoricla variable   NO PROBLEM
+
+
+####   Variable df$Store_and_fwd_flag
+summary(df$Store_and_fwd_flag)
+# It is a categorical(=factor) variable   NO PROBLEM but not any interest
+
+
+####   Variable df$RateCodeID
+summary(df$RateCodeID)
+# It is a categorical(=factor) variable   NO PROBLEM but not any interest
+
+####   Variable df$Pickup_longitude
+summary(df$Pickup_longitude)
+#0.00 looks to be an error
+# Seeing the individuals with this "0" value:
+df[which(df[,"Pickup_longitude"]==0),]
+
+# It is a quantitive variable  Non-possible values will be recoded to NA
+sel<-rownames(df[which(df[,"Pickup_longitude"]==0),])
+sel                 #### sel contains the rownames of the individuals with "0" 
+#                        as  value for longitude
+df[sel,"Pickup_longitude"]<-NA    # non-possible values are replaced by NA, missing value symbol in R
+
+##### Which trips are not running in New-York?
+##### 
+# Consider if, at least, one of the pick-up and drop-off points belong to New-York
+# area. If not, this trip is an "out-of-scope" individual and has to be eliminated
+# of the basis. Nevertheless, you have to justify this elimimation and count how many #individuals were in this situation
+
+# Look at that!! Possibly, starting from the outliers...
+# "0" is missing value, outliers can help to detect trips running outside of New York...
+
+#### Variable Total_amount
+summary(df$Total_amount)
+#negative values look to be errors
+
+df[which(df[,"Total_amount"]==0),]
+# there are not "no charge", so they are also "errors"
+# It is a quantitive variable  Non-possible values will be recoded to NA
+sel<-rownames(df[which(df[,"Total_amount"]<=0),])
+sel                 #### sel contains the rownames of the individuals with "0" 
+#                        as  value for longitude
+df[sel,"Total_amount"]<-NA    # non-possible values are replaced by NA, missing value symbol in R
+
+# Do that for all the variables....
+
+
+```
+
+## Define new variables
+
+Create new variables derived from the original ones, as effective speed, travel time, hour of request, period of request, effective trip distance (in km) and Manhattan distance (km)
+
+```{r}
+
+# New variables
+# Manhattan distance: from longitude and latitude info. Use man.dist.manual (in km)
+
+# Trip length in km
+df$tlenkm<-df$Trip_distance*1.609344 # Miles to km
+# Travel time in min
+df$traveltime<-(as.numeric(as.POSIXct(df$Lpep_dropoff_datetime)) - as.numeric(as.POSIXct(df$lpep_pickup_datetime)))/60
+# Effective speed (km/h)
+df$espeed<-(df$tlenkm/(df$traveltime))*60
+df$hour<-as.numeric(substr(strptime(df$lpep_pickup_datetime, "%Y-%m-%d %H:%M:%S"),12,13))
+df$period<-1
+df$period[df$hour>7]<-2
+df$period[df$hour>10]<-3
+df$period[df$hour>16]<-4
+df$period[df$hour>19]<-1
+df$period<-factor(df$period,labels=paste("Period",c("night","morning","valley","afternoon")))
+```
+
+Discretization
+```{r}
+####    Discretization of all variables, for example Total Amount
+# In this case, discretization: 4 levels are considered, from the quartiles
+
+
+```
+
+## Counting Missing data observations
+
+```{r}
+
+```
+
+
+## Definition of binary outcome: AnyTip
+
+Create binary target, define lists of numeric and qualitative variables and save your raw base database
+
+```{r}
+# Binary Target: Any Tip?
+
+df$AnyTip<-ifelse(df$Tip_amount<0.0001,0,1)
+df$AnyTip<-factor(df$AnyTip,labels=paste("AnyTip",c("No","Yes")))
+
+# Now one by one describe vars
+names(df)
+#vars_con<-names(df)[c(6:18,23:26)]
+#vars_dis<-names(df)[c(1,4,5,19,20,27:28)]
+#vars_res<-names(df)[c(18,29)]
+
+```
+
+## Univariant Exploratory Analysis (EDA)
+
+### Numeric variables
+
+#### Initialize counters for Missing Values and Outliers
+
+Outliers have to be considered for each numeric variable (initialization should be done at the beginning)
+
+```{r}
+# Outliers for numerical variables should be detected, some of them might be errors
+
+#######################################################
+iouts<-rep(0,nrow(df))  # rows - trips
+jouts<-rep(0,ncol(df))  # columns - variables
+######################################################
+
+```
+
+## Profiling
+
+```{r}
+##############################################################################
+#                                    Profiling 
+#                           Package FactoMineR will be used
+##############################################################################
+library(FactoMineR)
+summary(df$Total_amount)
+# The "variable to describe cannot have NA ###################################
+sel<-is.na(df$Total_amount)
+```
+
