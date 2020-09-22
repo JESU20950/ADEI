@@ -1,0 +1,38 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+# Load data
+
+```{r}
+setwd("D:/DOCENCIA/FIB-ADEI/EXEMPLES-TEO")
+rm(list=ls())
+
+library(AER)
+library(car)
+library(FactoMineR)
+data("SwissLabor")
+```
+
+# Take a look
+
+```{r}
+df<-SwissLabor
+head(df)
+summary(df)
+
+# EDA - Univariant - Factor
+barplot(table(df$participation))
+barplot(table(df$participation),col="cyan",main="Diagram a de Barres")
+
+# EDA - Univariant - Numèrica
+
+hist(df$income)
+hist(df$income,15,col=rainbow(8),main="Histograma Income")
+hist(df$income,15,freq=F,col=rainbow(8),main="Histograma Income")
+boxplot(df$income)
+
+```
