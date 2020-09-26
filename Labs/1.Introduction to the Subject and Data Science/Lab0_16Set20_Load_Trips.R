@@ -1,0 +1,21 @@
+setwd("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS")
+install.packages(c("car", "FactoMineR", "knitr"))
+library(car)
+library(FactoMineR)
+library(knitr)
+
+# Load Data and Select Sample
+
+df<-read.table("green_tripdata_2016-01.csv",header=T, sep=",")
+dim(df)  # Size of data.frame
+str(df) # Object class and description
+names(df) # List of variable names
+### Use birthday of 1 member of the group
+set.seed(28061963)
+sam<-as.vector(sort(sample(1:nrow(df),5000)))
+head(df)  # Take a look to the first rows/instances
+df<-df[sam,]  # Subset of rows _ My sample
+summary(df)
+
+save(list=c("df"),file="MyTaxi-Raw.RData")
+
