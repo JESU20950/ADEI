@@ -1,0 +1,724 @@
+---
+title: "Load Data and Set Sample"
+author: "Lidia Montero"
+date: \today
+output:
+  pdf_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+  html_document:
+    toc: no
+    toc_depth: '4'
+  word_document:
+    toc: no
+    toc_depth: '4'
+geometry: left=1.9cm,right=1.9cm,top=1.25cm,bottom=1.52cm
+fontsize: 18pt
+subtitle: 'Laboratori 1 - Data Preparation'
+classoption: a4paper
+editor_options: 
+  chunk_output_type: console
+---
+## Data Description
+
+This data dictionary describes SHL trip data. For dictionaries describing yellow taxi and FHV data, please visit http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml.
+
+  - VendorID	A code indicating the LPEP provider that provided the record.      1= Creative Mobile Technologies, LLC; 2= VeriFone Inc.   
+  - lpep_pickup_datetime	The date and time when the meter was engaged.    
+  - lpep_dropoff_datetime	The date and time when the meter was disengaged.     
+  - Passenger_count	The number of passengers in the vehicle. This is a driver-entered value.    -  Trip_distance 	The elapsed trip distance in miles reported by the taximeter.   
+  - Pickup_longitude	 Longitude where the meter was engaged.   
+  - Pickup_latitude	Latitude where the meter was engaged.   
+  - RateCodeID	The final rate code in effect at the end of the trip.  1= Standard rate  2=JFK 3=Newark 4=Nassau or Westchester 5=Negotiated fare 6=Group ride   
+  - Store_and_fwd_flag	This flag indicates whether the trip record was held in vehicle memory before sending to the vendor, aka "store and forward," because the vehicle did not have a connection to the server: Y= store and forward trip  N= not a store and forward trip   
+  - Dropoff_longitude	Longitude where the meter was timed off.   
+  - Dropoff_ latitude	Latitude where the meter was timed off.   
+  - Payment_type	A numeric code signifying how the passenger paid for the trip.  1= Credit card 2= Cash 3= No charge 4= Dispute 5= Unknown 6= Voided trip   
+  - Fare_amount	The time-and-distance fare calculated by the meter.   
+  - Extra	 Miscellaneous extras and surcharges.  Currently, this only includes the $0.50 and $1 rush hour and overnight charges. 
+  - MTA_tax	 $0.50 MTA tax that is automatically triggered based on the metered rate in use.    - Improvement_surcharge	$0.30 improvement surcharge assessed on hailed trips at the flag   drop. The improvement surcharge began being levied in 2015.   
+  - Tip_amount	 This field is automatically populated for credit card tips. Cash tips are not included.   
+  - Tolls_amount	Total amount of all tolls paid in trip.    
+  - Total_amount	The total amount charged to passengers. Does not include cash tips.   
+  - Trip_type	A code indicating whether the trip was a street-hail or a dispatch that is automatically assigned based on the metered rate in use but can be altered by the driver. 
+1= Street-hail 2= Dispatch  
+
+# Load Required Packages: to be increased over the course
+
+```{r}
+# Load Required Packages: to be increased over the course
+options(contrasts=c("contr.treatment","contr.treatment"))
+
+requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr")
+missingPackages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
+
+if(length(missingPackages)) install.packages(missingPackages)
+lapply(requiredPackages, require, character.only = TRUE)
+
+```
+
+## Select a sample of 5000 records
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+setwd("~/Desktop/NYCABS")
+filepath<-"~/Desktop/NYCABS/"
+# green_tripdata_2016-01
+
+df2<-read.table(paste0(filepath,"green_tripdata_2016-01.csv"),header=T, sep=",")
+```
+
+
+```{r}
+dim(df2)
+names(df2)
+head(df2)
+### Use birthday of 1 member of the group
+set.seed(28061963)
+sam<-as.vector(sort(sample(1:nrow(df2),5000)))
+df<-df2[sam,]
+df_total <- df
+```
+
+## Some useful functions
+
+```{r, echo=FALSE}
+
+# Some useful functions
+calcQ <- function(x) {
+  s.x <- summary(x)
+  iqr<-s.x[5]-s.x[2]
+  list(souti=s.x[2]-3*iqr, mouti=s.x[2]-1.5*iqr, min=s.x[1], q1=s.x[2], q2=s.x[3], 
+       q3=s.x[5], max=s.x[6], mouts=s.x[5]+1.5*iqr, souts=s.x[5]+3*iqr ) }
+
+countNA <- function(x) {
+  mis_x <- NULL
+  for (j in 1:ncol(x)) {mis_x[j] <- sum(is.na(x[,j])) }
+  mis_x <- as.data.frame(mis_x)
+  rownames(mis_x) <- names(x)
+  mis_i <- rep(0,nrow(x))
+  for (j in 1:ncol(x)) {mis_i <- mis_i + as.numeric(is.na(x[,j])) }
+  list(mis_col=mis_x,mis_ind=mis_i) }
+
+countX <- function(x,X) {
+  n_x <- NULL
+  for (j in 1:ncol(x)) {n_x[j] <- sum(x[,j]==X) }
+  n_x <- as.data.frame(n_x)
+  rownames(n_x) <- names(x)
+  nx_i <- rep(0,nrow(x))
+  for (j in 1:ncol(x)) {nx_i <- nx_i + as.numeric(x[,j]==X) }
+  list(nx_col=n_x,nx_ind=nx_i) }
+
+check_time <- function(df, separation) {
+  #return the position of rows where the time is incorrect
+  l <- t(as.data.frame(strsplit(as.character(df), separation)))
+  hours <-  as.numeric(l[,1])
+  minutes <-as.numeric(l[,2])
+  seconds <- as.numeric(l[,3])
+  result <- which(hours>24 || hours <0 || minutes >60 || minutes <0 || seconds >60 || seconds <0)
+  return(result)
+}
+
+```
+
+## Factors: Levels coding
+
+Now codify properly factors and remove non-informative variables
+```{r}
+summary(df)
+names(df)
+#df$VendorID<-factor(df$VendorID,labels=c("Mobile","VeriFone"))
+#summary(df$VendorID)
+#nlevels(df$VendorID)
+df$Trip_type<-factor(df$Trip_type,labels=c("Street-Hail","Dispatch"))
+summary(df$Trip_type)
+nlevels(df$Trip_type)
+df$Payment_type<-factor(df$Payment_type,labels=c("Credit card","Cash","No charge","Dispute"))
+summary(df$Payment_type)
+nlevels(df$Payment_type)
+
+df_datatime <- t(as.data.frame(strsplit(as.character(df$lpep_pickup_datetime), " ")))
+df$lpep_pickup_date <- factor(df_datatime[,1])
+df$lpep_pickup_time <- factor(df_datatime[,2])
+colnames(df)[which(names(df) == "Lpep_dropoff_datetime")] <- "lpep_dropoff_datetime"
+df_datatime <- t(as.data.frame(strsplit(as.character(df$lpep_dropoff_datetime), " ")))
+df$lpep_dropoff_date <- factor(df_datatime[,1])
+df$lpep_dropoff_time <- factor(df_datatime[,2])
+
+df$Store_and_fwd_flag <- df$Store_and_fwd_flag == "Y"
+
+
+colnames(df)[which(names(df) == "improvement_surcharge")] <- "Improvement_surcharge"
+
+# Remove non-informative variables
+df$Ehail_fee<-NULL
+df$VendorID<-NULL
+var_categorical <- c("lpep_pickup_datetime", "lpep_dropoff_datetime", "RateCodeID","Payment_type")
+var_boolean <- c("Store_and_fwd_flag")
+var_numerical <- c("Passenger_count", "Trip_distance", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "Extra", "MTA_tax", "Improvement_surcharge", "Tip_amount", "Tolls_amount", "Total_amount")
+```
+
+
+# Initialization of counts for missings, outliers and errors. All numerical variables have to be checked before
+
+```{r}
+
+#######################################################
+imis<-rep(0,nrow(df))  # rows - trips
+jmis<-rep(0,2*ncol(df))  # columns - variables
+######################################################
+jmis <- colSums(is.na(df))
+imis <- rowSums(is.na(df))
+jmis
+imis
+#######################################################
+iouts<-rep(0,nrow(df))  # rows outliers - trips
+jouts<-rep(0,2*ncol(df))  # columns outliers - variables
+######################################################
+
+#######################################################
+ierrs<-rep(0,nrow(df))  # rows errors - trips
+jerrs<-rep(0,2*ncol(df))  # columns errors - variables
+######################################################
+
+
+```
+
+
+## Data Coding and Clearance
+
+```{r}
+####   Variable RateCodeID. Consider Recoding to fewer levels
+summary(df$RateCodeID)
+df$RateCodeID<-factor(df$RateCodeID)
+barplot(table(df$RateCodeID))
+
+# It is a categorical(=factor) variable   NO PROBLEM but not any interest
+df$RateCodeID <- df$RateCodeID != 1
+df$RateCodeID <- factor(df$RateCodeID, labels=c("Standard rate","Others"))
+summary(df$RateCodeID)
+
+
+#Variable Passenger_count
+
+hist(df$Passenger_count, main="Histogram of Passenger_count")
+Boxplot(df$Passenger_count, main="Boxplot of Passenger_count")
+summary(df$Passenger_count)
+
+# errors
+l <- which(df$Passenger_count<0)
+if (length(l)>0) {
+  ierrs[l]<-ierrs[l]+1
+  jerrs["Passenger_count"]<-length(l)
+}
+df[l,"Passenger_count"]<-NA 
+
+
+hist(df$Passenger_count, main="Histogram of Passenger_count")
+Boxplot(df$Passenger_count, main="Boxplot of Passenger_count")
+summary(df$Passenger_count)
+
+
+#Variable Trip_distance
+summary(df$Trip_distance)
+#errors ->correct
+
+#outliers
+hist(df$Trip_distance, main="Histogram of Trip_distance")
+Boxplot(df$Trip_distance, main="Boxplot of Trip_distance")
+var_out<-calcQ(df$Trip_distance)
+abline(h=var_out$souts,col="red")
+abline(h=var_out$souti,col="blue")
+l<-which(df$Trip_distance>20)
+iouts[l]<-iouts[l]+1
+jouts["Trip_distance"]<-length(l)
+
+
+
+### Variable Pickup_latitude
+
+summary(df$Pickup_latitude)
+#0.00 looks to be an error
+# Seeing the individuals with this "0" value:
+df[which(df[,"Pickup_latitude"]==0),]
+
+# It is a quantitive variable  Non-possible values will be recoded to NA
+sel<-which(df$Pickup_latitude ==0)
+ierrs[sel]<-ierrs[sel]+1
+jerrs["Pickup_latitude"]<-length(sel)
+sel                 #### sel contains the rownames of the individuals with "0" 
+#                        as  value for longitude
+df[sel,"Pickup_latitude"]<-NA    # non-possible values are replaced by NA, missing value symbol in R
+
+
+library(geosphere) 
+df$distHaversine <-distHaversine(df[,c("Pickup_longitude", "Pickup_latitude")],
+              df[,c("Dropoff_longitude", "Dropoff_latitude")])/1000
+
+
+
+####   Variable Store_and_fwd_flag
+summary(df$Store_and_fwd_flag)
+df$Store_and_fwd_flag<-factor(df$Store_and_fwd_flag)
+barplot(table(df$Store_and_fwd_flag))
+# It is a categorical(=factor) variable   NO PROBLEM but not any interest
+
+
+### Variable Payment_type
+summary(df$Payment_type)
+barplot(table(df$Payment_type))
+l <- which(df$Payment_type != "Credit card" & df$Payment_type != "Cash" )
+df$Payment_type <- as.character(df$Payment_type)
+df[l,"Payment_type"] <- "Others"
+df$Payment_type <- as.factor(df$Payment_type )
+summary(df$Payment_type)
+barplot(table(df$Payment_type))
+
+## Variable Fare_amount
+hist(df$Fare_amount, main="Histogram of Fare_amount")
+Boxplot(df$Fare_amount, main="Boxplot of Fare_amount")
+summary(df$Fare_amount)
+
+# errors
+l <- which(df$Fare_amount<0)
+if (length(l)>0) {
+  ierrs[l]<-ierrs[l]+1
+  jerrs["Fare_amount"]<-length(l)
+}
+df[l,"Fare_amount"]<-NA 
+
+# Outlier detection
+Boxplot(df$Fare_amount)
+var_out<-calcQ(df$Fare_amount)
+abline(h=var_out$souts,col="red")
+abline(h=var_out$souti,col="blue")
+var_out$souts
+l <-which(df$Fare_amount>80)
+iouts[l ]<-iouts[l]+1
+jouts["Fare_amount"]<-length(l)
+df[l,"Fare_amount"]<-NA 
+
+hist(df$Fare_amount, main="Histogram of Fare_amount")
+Boxplot(df$Fare_amount, main="Boxplot of Fare_amount")
+summary(df$Fare_amount)
+
+## Variable Extra
+
+hist(df$Extra, main="Histogram of Extra")
+Boxplot(df$Extra, main="Boxplot of Extra")
+summary(df$Extra)
+
+# errors
+l <- which(df$Extra<0)
+if (length(l)>0) {
+  ierrs[l]<-ierrs[l]+1
+  jerrs["Extra"]<-length(l)
+}
+df[l,"Extra"]<-NA 
+
+# Outlier detection
+Boxplot(df$Extra)
+var_out<-calcQ(df$Extra)
+abline(h=var_out$souts,col="red")
+abline(h=var_out$souti,col="blue")
+var_out$souts
+#No outliers
+
+### Variable MTA_tax
+hist(df$MTA_tax, main="Histogram of MTA_tax")
+Boxplot(df$MTA_tax, main="Boxplot of MTA_tax")
+summary(df$MTA_tax)
+
+# errors
+l <- which(df$MTA_tax<0)
+if (length(l)>0) {
+  ierrs[l]<-ierrs[l]+1
+  jerrs["MTA_tax"]<-length(l)
+}
+df[l,"MTA_tax"]<-NA 
+
+df[,"MTA_tax"] <- df[,"MTA_tax"] == 0.5
+barplot(table(df[,"MTA_tax"]))
+summary(df[,"MTA_tax"] )
+
+### Variable Improvement_surcharge
+hist(df$Improvement_surcharge, main="Histogram of Improvement_surcharge")
+Boxplot(df$Improvement_surcharge, main="Boxplot of Improvement_surcharge")
+summary(df$Improvement_surcharge)
+
+# errors
+l <- which(df$Improvement_surcharge<0)
+if (length(l)>0) {
+  ierrs[l]<-ierrs[l]+1
+  jerrs["Improvement_surcharge"]<-length(l)
+}
+df[l,"Improvement_surcharge"]<-NA 
+df[,"Improvement_surcharge"] <- df[,"Improvement_surcharge"] == 0.3
+barplot(table(df[,"Improvement_surcharge"]))
+summary(df[,"Improvement_surcharge"] )
+
+
+
+# Variable Tip_amount
+hist(df$Tip_amount, main="Histogram of Tip_amount")
+Boxplot(df$Tip_amount, main="Boxplot of Tip_amount")
+summary(df$Tip_amount)
+
+# errors
+l <- which(df$Tip_amount<0)
+if (length(l)>0) {
+  ierrs[l]<-ierrs[l]+1
+  jerrs["Tip_amount"]<-length(l)
+}
+df[l,"Tip_amount"]<-NA 
+
+# Outlier detection
+Boxplot(df$Tip_amount)
+var_out<-calcQ(df$Tip_amount)
+abline(h=var_out$souts,col="red")
+abline(h=var_out$souti,col="blue")
+var_out$souts
+l <-which(df$Tip_amount>15)
+iouts[l ]<-iouts[l]+1
+jouts["Tip_amount"]<-length(l)
+df[l,"Tip_amount"]<-NA 
+
+hist(df$Tip_amount, main="Histogram of Tip_amount")
+Boxplot(df$Tip_amount, main="Boxplot of Tip_amount")
+summary(df$Tip_amount)
+
+
+### Variable Tolls_amount
+
+hist(df$Tolls_amount, main="Histogram of Tolls_amount")
+Boxplot(df$Tolls_amount, main="Boxplot of Tolls_amount")
+summary(df$Tolls_amount)
+
+# errors
+l <- which(df$Tolls_amount<0)
+if (length(l)>0) {
+  ierrs[l]<-ierrs[l]+1
+  jerrs["Tolls_amount"]<-length(l)
+}
+df[l,"Tolls_amount"]<-NA 
+
+# Outlier detection
+Boxplot(df$Tolls_amount)
+var_out<-calcQ(df$Tolls_amount)
+abline(h=var_out$souts,col="red")
+abline(h=var_out$souti,col="blue")
+var_out$souts
+l <-which(df$Tolls_amount>8)
+iouts[l ]<-iouts[l]+1
+jouts["Tolls_amount"]<-length(l)
+df[l,"Tolls_amount"]<-NA 
+
+hist(df$Tolls_amount, main="Histogram of Tolls_amount")
+Boxplot(df$Tolls_amount, main="Boxplot of Tolls_amount")
+summary(df$Tolls_amount)
+
+
+
+
+
+### Variable Total_amount
+
+#errors
+
+summary(df$Total_amount)
+#negative values seem to be errors - 0 Total_amount is possible when Payment_type =="No charge"
+
+llsel<-rownames(df[which(df[,"Total_amount"]<0),])
+# there are not "no charge", so they are also "errors"
+# It is a quantitive variable  Non-possible values will be recoded to NA
+sel<-which(df$Total_amount<0)
+if (length(sel)>0) {
+  ierrs[sel]<-ierrs[sel]+1
+  jerrs["Total_amount"]<-length(sel)
+}
+sel                 #### sel contains the rownames of the individuals with "0" 
+#                        as  value for longitude
+df[sel,"Total_amount"]<-NA    # non-possible values are replaced by NA, missing value symbol in R
+
+# Outlier detection
+Boxplot(df$Total_amount)
+var_out<-calcQ(df$Total_amount)
+abline(h=var_out$souts,col="red")
+abline(h=var_out$souti,col="blue")
+
+
+llout<-which((df$Total_amount<0)|(df$Total_amount>100))
+iouts[llout]<-iouts[llout]+1
+jouts["Total_amount"]<-length(llout)
+df[llout,"Total_amount"]<-NA 
+
+
+```
+
+## Define new variables
+
+Create new variables derived from the original ones, as effective speed, travel time, hour of request, period of request, effective trip distance (in km) 
+
+```{r}
+# New variables
+
+# Trip length in km
+df$tlenkm<-df$Trip_distance*1.609344 # Miles to km
+# Travel time in min
+df$traveltime<-(as.numeric(as.POSIXct(df$lpep_pickup_datetime)) - as.numeric(as.POSIXct(df$lpep_dropoff_datetime)))/60
+
+
+# Effective speed (km/h)
+df$espeed<-(df$tlenkm/(df$traveltime))*60
+
+# Missing data
+sel<-which(is.na(df$espeed<=0));length(sel)
+imis[sel]<-imis[sel]+1
+jmis[26]<-length(sel)
+
+# Error detection
+summary(df$espeed)
+sel<-which((df$espeed<=0)|(df$espeed=="Inf"))
+ierrs[sel]<-ierrs[sel]+1
+jerrs[26]<-length(sel)
+sel                 #### sel contains the rownames of the individuals with "0" 
+#                        as  value for longitude
+df[sel,"espeed"]<-NA 
+
+# Check outliers
+summary(df$espeed)
+calcQ(df$espeed)
+# Outlier detection
+Boxplot(df$espeed)
+var_out<-calcQ(df$espeed)
+abline(h=var_out$souts,col="red")
+abline(h=var_out$souti,col="red")
+
+llout<-which((df$espeed<=3)|(df$espeed>80))
+iouts[llout]<-iouts[llout]+1
+jouts[26]<-length(llout)
+df[llout,"espeed"]<-NA 
+
+df$hour<-as.numeric(substr(strptime(df$lpep_pickup_datetime, "%Y-%m-%d %H:%M:%S"),12,13))
+df$period<-1
+df$period[df$hour>7]<-2
+df$period[df$hour>10]<-3
+df$period[df$hour>16]<-4
+df$period[df$hour>19]<-1
+df$period<-factor(df$period,labels=paste("Period",c("night","morning","valley","afternoon")))
+
+
+#......
+
+```
+
+## Imputation of numeric variables
+
+```{r}
+library(missMDA)
+# Now one by one describe vars and put them on lists
+names(df)
+vars_con<-names(df)[c(10:16,18,23:25)]
+vars_dis<-names(df)[c(1,4,5,20:21)]
+vars_res<-names(df)[c(19)]
+
+summary(df[,vars_con])
+res.impca<-imputePCA(df[,vars_con],ncp=10)
+summary(res.impca$completeObs)
+
+# If you are SATISFIED then...
+
+# Check one by one
+ll<-which(res.impca$completeObs[,"espeed"]<3)
+res.impca$completeObs[ll,"espeed"]<-3
+df[ , vars_con ]<-res.impca$completeObs   # Once you have validated the process
+
+
+
+```
+
+## Imputation of qualitative variables
+
+```{r}
+summary(df[,vars_dis])
+res.immca<-imputeMCA(df[,vars_dis],ncp=10)
+summary(res.immca$completeObs)
+
+# Check one by one
+# df[ , vars_dis ]<-res.immca$completeObs   # Once you have validated the process
+
+```
+
+## Discretization 
+
+```{r}
+####    Discretization of all variables, for example espeed
+# In this case, discretization: 4 levels are considered, from the quartiles
+## Check for missings, outliers and errors
+
+summary(df$espeed)
+Boxplot(df$espeed)
+
+quantile(df$espeed,seq(0,1,0.25),na.rm=TRUE)
+quantile(df$espeed,seq(0,1,0.1),na.rm=TRUE)
+
+varaux<-factor(cut(df$espeed,breaks=quantile(df$speed),include.lowest = T ))
+summary(varaux)
+tapply(df$espeed,varaux,median)
+df$f.speed<-factor(cut(varaux,breaks=c(0,15,19,24,80),include.lowest = T ))
+levels(df$f.speed)<-paste("f.speed-",levels(df$f.speed),sep="")
+table(df$f.speed,useNA="always")
+
+####    Discretization of all numeric variables 
+
+# Binary Target: Any Tip?
+
+df$AnyTip<-ifelse(df$Tip_amount<0.0001,0,1)
+df$AnyTip<-factor(df$AnyTip,labels=paste("AnyTip",c("No","Yes")))
+summary(df$AnyTip)
+# Pie
+piepercent<-round(100*(table(df$AnyTip)/nrow(df)),dig=2); piepercent
+pie(table(df$AnyTip),col=heat.colors(2),labels=paste(piepercent,"%"))
+legend("topright", levels(df$AnyTip), cex = 0.8, fill = heat.colors(2))
+# Bar Chart
+barplot(table(df$AnyTip),main="Barplot Final Decision Factor",col=c("green","red"))
+```
+
+
+## Definition of binary outcome: AnyTip
+
+Create binary target, define lists of numeric and qualitative variables and save your raw base database
+
+```{r}
+# Binary Target: Any Tip?
+
+df$AnyTip<-ifelse(df$Tip_amount<0.0001,0,1)
+df$AnyTip<-factor(df$AnyTip,labels=paste("AnyTip",c("No","Yes")))
+
+# Now one by one describe vars and update lists
+names(df)
+#vars_con<-names(df)[c(6:18,23:26)]
+#vars_dis<-names(df)[c(1,4,5,19,20,27:28)]
+#vars_res<-names(df)[c(18,29)]
+
+```
+
+## Multivariant Outliers
+
+```{r}
+library(mvoutlier)
+
+ll<-which(is.na(df$Total_amount))
+dff<-df[-ll,]
+summary(dff[,vars_con])
+# aq.plot(dff[,c(vars_res,vars_con)]) # It doesn't work
+names(dff)
+# mout<-aq.plot(dff[,c(12,19,24:26)],delta=qchisq(0.995,5),quan=0.75)
+
+library(chemometrics)
+summary(dff[,c(12,19,24:26)])
+mout<-Moutlier(dff[,c(12,19,24:27)],quantile = 0.995, plot = TRUE)
+
+ll<-which(mout$rd>500)
+Boxplot(mout$rd)
+df[ll,c(vars_res,vars_con)]
+```
+
+
+## Data Quality report (missings/errors/outliers) and remove observations with missings in targets
+
+```{r}
+#mis1<-countNA(df)
+
+summary(imis)
+summary(jmis);jmis
+
+ll<-which(is.na(df$Total_amount))
+df<-df[-ll,]
+
+
+```
+
+
+## Univariant Exploratory Analysis (EDA)
+
+### Numeric variables - After outlier detection and imputation
+
+```{r}
+# I am going to show some nice plots using ggplot library
+# 
+# ggplot
+# histogram absolute scale
+ggplot(data=df, aes(espeed)) + geom_histogram(aes(y=..count..),binwidth=5)
+ggplot(data=df, aes(espeed)) + geom_histogram(aes(y=..density..),fill="green",binwidth=5)
+ggplot(data=df, aes(espeed)) + geom_histogram(aes(y=..count..,fill=..count..),binwidth=5)
+ggplot(data=df, aes(espeed)) + geom_histogram(aes(y=..count..,fill=..count..),binwidth=5)+
+  scale_fill_gradient( low = "yellow", high = "red")
+
+# histogram escala relativa amb densitat
+ggplot(data=df, aes(espeed)) + 
+  geom_histogram(aes(y=..density..,fill=..density..),breaks=seq(0, 80, by =5),col="red") +labs(title="Histogram for Effective Speed")+
+  geom_density(col=1,lwd=2) + labs(x="Speed", y="Proportion") + xlim(c(0, 80)) + ylim(c(0,0.08))+
+  scale_fill_gradient( low = "yellow", high = "red")+theme_bw()
+
+hist(df$espeed,freq=F,breaks=seq(0,80,5),main="Relative Histogram: Effective Speed",col=heat.colors(5))
+mm=mean(df$espeed);ss=sd(df$espeed);mm;ss
+curve(dnorm(x,mm,ss),col="blue",lwd=2,add=T)
+
+# Boxplot
+
+Boxplot(df$espeed,main="Effective Speed (km/h)",col="orange")
+b<-ggplot(data=df)+geom_boxplot(aes(x=1,y=espeed),fill="green",outlier.size = 3.0,varwidth=T)+geom_hline(yintercept=60,lwd=2,col="red")+labs(title="Boxplot for Effective Speed (km/h)")+theme_bw()
+b
+```
+
+### Qualitative variables - After imputation
+
+```{r}
+# Pie Chart
+library(RColorBrewer)
+b<-ggplot(data=df, aes(x=f.speed,fill=f.speed))+geom_bar(col="grey50")
+b<-b+coord_polar(theta="y")+scale_fill_brewer(palette="YlOrRd")+theme_bw()
+b
+#display.brewer.all()
+# Barplot
+b<-ggplot(data=df)+geom_bar(aes(f.speed),fill="green",col="grey50")
+b
+
+b<-ggplot(data=df)+geom_bar(aes(x=f.speed,fill=f.speed),col="grey50")+scale_color_gradient(low="red",high="yellow")
+b
+
+# Graphics: base library
+# Pie
+piepercent<-round(100*(table(df$AnyTip)/nrow(df)),dig=2); piepercent
+pie(table(df$AnyTip),col=heat.colors(2),labels=paste(piepercent,"%"))
+legend("topright", levels(df$AnyTip), cex = 0.8, fill = heat.colors(2))
+
+# Bar Chart
+barplot(table(df$AnyTip),main="Barplot Final Decision Factor",col=c("green","red"))
+```
+
+## Profiling
+
+```{r}
+##############################################################################
+#                                    Profiling 
+#                           Package FactoMineR will be used
+##############################################################################
+library(FactoMineR)
+summary(df$Total_amount)
+# The "variable to describe cannot have NA ###################################
+# res.condes<-condes(df,which(names(df)=="Total_amount"))  # Takes a lot
+res.condes<-condes(df[,c(vars_res,vars_con,vars_dis)],1)
+
+res.condes$quanti  # Global association to numeric variables
+res.condes$quali # Global association to factors
+res.condes$category  # Partial association to significative levels in factors
+```
+

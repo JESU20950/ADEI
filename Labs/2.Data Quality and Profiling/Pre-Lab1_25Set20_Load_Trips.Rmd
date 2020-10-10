@@ -68,7 +68,7 @@ Data Dictionary - SHL Trip Records -This data dictionary describes SHL trip data
 # Load Required Packages: to be increased over the course
 options(contrasts=c("contr.treatment","contr.treatment"))
 
-requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr")
+requiredPackages <- c("effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr")
 missingPackages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
 
 if(length(missingPackages)) install.packages(missingPackages)
@@ -85,8 +85,8 @@ if(!is.null(dev.list())) dev.off()
 # Clean workspace
 rm(list=ls())
 
-setwd("C:/Users/jmolirol/Desktop/NYCABS")
-filepath<-"C:/Users/jmolirol/Desktop/NYCABS/"
+setwd("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS")
+filepath<-"C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS/"
 # green_tripdata_2016-01
 
 df<-read.table(paste0(filepath,"green_tripdata_2016-01.csv"),header=T, sep=",")
@@ -140,16 +140,10 @@ Now codify properly factors and remove non-informative variables
 summary(df)
 names(df)
 df$VendorID<-factor(df$VendorID,labels=c("Mobile","VeriFone"))
-summary(df$VendorID)
-nlevels(df$VendorID)
-levels(df$VendorID)<-paste0("f.Vendor-", levels(df$VendorID))
-summary(df$VendorID)
 df$Trip_type<-factor(df$Trip_type,labels=c("Street-Hail","Dispatch"))
-
 df$Payment_type<-factor(df$Payment_type,labels=c("Credit card","Cash","No charge","Dispute"))
-summary(df$Payment_type)
-df$pickup<-substr(strptime(df$lpep_pickup_datetime, "%Y-%m-%d %H:%M:%S"), 12, 13)
 
+df$pickup<-substr(strptime(df$lpep_pickup_datetime, "%Y-%m-%d %H:%M:%S"), 12, 13)
 df$dropoff<-substr(strptime(df$Lpep_dropoff_datetime, "%Y-%m-%d %H:%M:%S"), 12, 13)
 
 # Remove uninformative variablse from data.frame
@@ -200,15 +194,8 @@ df$Store_and_fwd_flag<-factor(df$Store_and_fwd_flag)
 ####   Variable df$RateCodeID. Consider Recoding to fewer levels
 summary(df$RateCodeID)
 df$RateCodeID<-factor(df$RateCodeID)
-
 # It is a categorical(=factor) variable   NO PROBLEM but not any interest
-df$f.Rate <- 1
-ll<-which(df$RateCodeID != "1"); length(ll)
-df$f.Rate[ll] <- 2
-df$f.Rate <- factor(df$f.Rate, levels=1:2, labels=c("f.Rate-1","f.Rate-Other"))
-summary(df$f.Rate)
-df$RateCodeID<-factor(df$RateCodeID, labels = c("0", "1", "1", "1","1"))
-summary(df$RateCodeID)
+
 ####   Variable df$Pickup_longitude
 summary(df$Pickup_longitude)
 #0.00 looks to be an error
@@ -251,8 +238,6 @@ Boxplot(df$Total_amount)
 var_out<-calcQ(df$Total_amount)
 abline(h=var_out$souts,col="red")
 abline(h=var_out$souti,col="red")
-abline(h=2,col="blue",lwd = 2)
-
 
 llout<-which((df$Total_amount<0)|(df$Total_amount>100))
 iouts[llout]<-iouts[llout]+1
@@ -314,10 +299,6 @@ df$period[df$hour>10]<-3
 df$period[df$hour>16]<-4
 df$period[df$hour>19]<-1
 df$period<-factor(df$period,labels=paste("Period",c("night","morning","valley","afternoon")))
-
-
-#......
-
 ```
 
 ## Imputation of numeric variables
@@ -326,22 +307,18 @@ df$period<-factor(df$period,labels=paste("Period",c("night","morning","valley","
 library(missMDA)
 # Now one by one describe vars and put them on lists
 names(df)
-vars_con<-names(df)[c(10:16,18,23:25)]
-vars_dis<-names(df)[c(1,4,5,20:21)]
+vars_con<-names(df)[c(10:16,18,24:27)]
+vars_dis<-names(df)[c(1,4,5,20:21,28)]
 vars_res<-names(df)[c(19)]
 
 summary(df[,vars_con])
 res.impca<-imputePCA(df[,vars_con],ncp=10)
 summary(res.impca$completeObs)
 
-# If you are SATISFIED then...
-
 # Check one by one
 ll<-which(res.impca$completeObs[,"espeed"]<3)
 res.impca$completeObs[ll,"espeed"]<-3
 df[ , vars_con ]<-res.impca$completeObs   # Once you have validated the process
-
-
 
 ```
 
@@ -370,10 +347,10 @@ Boxplot(df$espeed)
 quantile(df$espeed,seq(0,1,0.25),na.rm=TRUE)
 quantile(df$espeed,seq(0,1,0.1),na.rm=TRUE)
 
-varaux<-factor(cut(df$espeed,breaks=quantile(df$speed),include.lowest = T ))
-summary(varaux)
-tapply(df$espeed,varaux,median)
-df$f.speed<-factor(cut(varaux,breaks=c(0,15,19,24,80),include.lowest = T ))
+df$aux<-factor(cut(df$espeed,breaks=c(0,15,19,24,80),include.lowest = T ))
+summary(df$aux)
+tapply(df$espeed,df$aux,median)
+df$f.speed<-factor(cut(df$espeed,breaks=c(0,15,19,24,80),include.lowest = T ))
 levels(df$f.speed)<-paste("f.speed-",levels(df$f.speed),sep="")
 table(df$f.speed,useNA="always")
 
