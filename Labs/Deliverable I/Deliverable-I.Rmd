@@ -67,11 +67,17 @@ if(!is.null(dev.list())) dev.off()
 # Clean workspace
 rm(list=ls())
 
-setwd("~/Desktop/NYCABS")
-filepath<-"~/Desktop/NYCABS/"
+setwd("C:/Users/carle/Desktop/ADEI2")
+filepath<-"C:/Users/carle/Desktop/ADEI2/"
+# green_tripdata_2016-01
+
+#setwd("~/Desktop/NYCABS")
+#filepath<-"~/Desktop/NYCABS/"
 # green_tripdata_2016-01
 
 df2<-read.table(paste0(filepath,"green_tripdata_2016-01.csv"),header=T, sep=",")
+
+summary(df2)
 ```
 
 
@@ -80,10 +86,12 @@ dim(df2)
 names(df2)
 head(df2)
 ### Use birthday of 1 member of the group
-set.seed(28061963)
+set.seed(02041997)
 sam<-as.vector(sort(sample(1:nrow(df2),5000)))
 df<-df2[sam,]
 df_total <- df
+summary(df2)
+summary(df_total)
 ```
 
 ## Some useful functions
@@ -135,34 +143,46 @@ summary(df)
 names(df)
 #df$VendorID<-factor(df$VendorID,labels=c("Mobile","VeriFone"))
 #summary(df$VendorID)
-#nlevels(df$VendorID)
+nlevels(df$VendorID)
+
+#VENDOR_ID
+df$VendorID<-factor(df$VendorID,labels=c("Mobile","VeriFone"))
+levels(df$VendorID)<-paste0("f.Vendor-",levels(df$VendorID))
+summary(df$VendorID)
+
 df$Trip_type<-factor(df$Trip_type,labels=c("Street-Hail","Dispatch"))
+levels(df$Trip_type)<-paste0("f.TripType-",levels(df$Trip_type))
 summary(df$Trip_type)
 nlevels(df$Trip_type)
+
 df$Payment_type<-factor(df$Payment_type,labels=c("Credit card","Cash","No charge","Dispute"))
+levels(df$Payment_type)<-paste0("f.PayType-",levels(df$Payment_type))
 summary(df$Payment_type)
 nlevels(df$Payment_type)
 
 df_datatime <- t(as.data.frame(strsplit(as.character(df$lpep_pickup_datetime), " ")))
 df$lpep_pickup_date <- factor(df_datatime[,1])
 df$lpep_pickup_time <- factor(df_datatime[,2])
+
+
 colnames(df)[which(names(df) == "Lpep_dropoff_datetime")] <- "lpep_dropoff_datetime"
 df_datatime <- t(as.data.frame(strsplit(as.character(df$lpep_dropoff_datetime), " ")))
 df$lpep_dropoff_date <- factor(df_datatime[,1])
 df$lpep_dropoff_time <- factor(df_datatime[,2])
 
+summary(df$Store_and_fwd_flag)
 df$Store_and_fwd_flag <- df$Store_and_fwd_flag == "Y"
 
-
+summary(df$improvement_surcharge)
 colnames(df)[which(names(df) == "improvement_surcharge")] <- "Improvement_surcharge"
 
 # Remove non-informative variables
 df$Ehail_fee<-NULL
-df$VendorID<-NULL
-var_categorical <- c("lpep_pickup_datetime", "lpep_dropoff_datetime", "RateCodeID","Payment_type")
+#df$VendorID<-NULL
+var_categorical <- c("lpep_pickup_datetime", "lpep_dropoff_datetime", "RateCodeID","Payment_type","VendorID")
 var_boolean <- c("Store_and_fwd_flag")
 var_numerical <- c("Passenger_count", "Trip_distance", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "Extra", "MTA_tax", "Improvement_surcharge", "Tip_amount", "Tolls_amount", "Total_amount")
-```
+ ```
 
 
 # Initialization of counts for missings, outliers and errors. All numerical variables have to be checked before
@@ -448,6 +468,7 @@ df[sel,"Total_amount"]<-NA    # non-possible values are replaced by NA, missing 
 
 # Outlier detection
 Boxplot(df$Total_amount)
+
 var_out<-calcQ(df$Total_amount)
 abline(h=var_out$souts,col="red")
 abline(h=var_out$souti,col="blue")
