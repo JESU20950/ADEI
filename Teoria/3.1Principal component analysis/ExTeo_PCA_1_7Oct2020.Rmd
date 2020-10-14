@@ -1,0 +1,172 @@
+---
+title: "Untitled"
+author: "Lídia Montero"
+date: " 7 de octubre de 2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(FactoMineR)
+library(car)
+library(MVA)
+
+df<-USArrests
+names(df)
+head(df)
+summary(df)
+
+# Target Murder
+df$nom<-row.names(df)
+res.com<-condes(df[,1:4],1) 
+str(res.com)
+res.com$quanti
+res.com<-condes(df[,1:4],4) # Target Rape
+res.com$quanti
+
+
+row.names(df)<-abbreviate(row.names(df),6,method="both.sides")
+cor(df)  # Z - Matriu centrada i redu?da - PCA normalitzades - French 
+
+
+#  Standarized data - cor(df)
+# Valors propis i vectors propis
+
+eigen(cor(df))
+t(eigen(cor(df))$vectors)%*%eigen(cor(df))$vectors
+
+res.pca<-PCA(df)
+
+res.pca<-PCA(df,axes=3:4)
+summary(res.pca, nb.dec = 2, ncp = 2, nbelements = 50 )
+barplot(res.pca$eig[,1],main="Eigenvalues",names.arg=paste("dim",1:nrow(res.pca$eig)))
+
+attributes(res.pca$var)
+# principal components 
+res.pca$ind$coord
+
+plot(res.pca,choix="ind", invisible="ind")
+plot(res.pca,choix="ind")
+plot(res.pca,choix="ind", cex=0.75, col.ind="grey30")
+
+
+summary(res.pca, nb.dec = 2, ncp = 2, nbelements = 50 )
+sum(res.pca$ind$contrib[,2])
+
+plot.PCA(res.pca,choix=c("ind"),cex=1, col.ind="gray30",select = "cos2 5")
+
+plot.PCA(res.pca,choix=c("ind"),cex=1, col.ind="gray30",select = "contrib 5",axes=3:4)
+
+res.des<-dimdesc(res.pca,1:4)
+res.des$Dim.1
+summary(df)
+
+# American point of view
+
+pc.cr<-princomp(df, cor = TRUE) # =^= prcomp(USArrests, scale=TRUE)
+summary(pc.cr)
+screeplot(pc.cr)
+screeplot(pc.cr,type="lines")
+
+loadings(pc.cr)  # note that blank entries are small but not zero
+## The signs of the columns are arbitrary
+plot(pc.cr) # shows a screeplot.
+biplot(pc.cr)
+pc.cr$loadings
+
+eigen(cor(df))
+pc.cr$scores
+
+
+```
+
+# Example: European Temperatures
+
+```{r}
+# Temperatures can be summarised by two synthetic variables: average annual temperature and thermal amplitude
+library(FactoMineR)
+temperature <- read.table("http://factominer.free.fr/book/temperature.csv",header=TRUE,sep=";",dec=".",row.names=1)
+
+summary(temperature)
+
+# Target : Annual
+
+res.con<-condes(temperature,13)
+str(res.con)
+res.con$quanti
+res.con$quali
+res.con$category
+res.cat<-catdes(temperature,17)
+res.cat$quanti.var
+res.cat$quanti
+
+summary(temperature)
+names(temperature)
+row.names(temperature)
+#res<-PCA(temperature[,1:16],quanti.sup=13:16)
+
+# Capitals are active rows - Jan to Dec variables actives
+res<-PCA(temperature,ind.sup=24:35,quanti.sup=13:16,quali.sup=17)
+summary(res, nb.dec = 2, ncp = 4, nbelements = 23 )
+res$ind$coord
+
+sum(res$eig[,1]) 
+
+# Active variables temperatures Jan to Dec
+res<-PCA(temperature[,1:12])
+res<-PCA(temperature[,1:16],quanti.sup=13:16)
+res<-PCA(temperature,ind.sup=24:35,quanti.sup=13:16,quali.sup=17)
+
+summary(res, nb.dec = 2, ncp = 4, nbelements = 12 )
+boxplot(res$ind$contrib)
+Boxplot(res$ind$contrib[,2],labels=row.names(temperature))
+
+plot.PCA(res,choix="ind",habillage=17,select="contrib 5")
+plot.PCA(res,choix="ind",habillage=17)
+plot.PCA(res,choix=c("ind"),habillage=17)
+
+
+
+plotellipses(res,17,choix="ind", invisible="ind")
+dimdesc(res,1:4)
+res$eig
+
+
+```
+
+Example library(AER) CPS1985
+
+```{r}
+library(AER)
+data("CPS1985")
+df<-CPS1985
+summary(df)
+
+# Target numeric: wage
+res.con<-condes(df,1)
+res.con$quanti
+res.con$quali
+res.con$category
+
+res.cat<-catdes(df,5) # Target ethnicity
+res.cat$test.chi2  # Associació global amb els factors
+res.cat$quanti.var # Associació global amb les numèriques
+
+res.cat$category  # Associació de les categories dels altres factors amb les categories de l'ètnia  
+
+# Interpretació:
+# Cluster Cauc del target factor ethnicity mostra relació amb el nivell services de occupation com?
+# 1) Que globalment els occupation==services són 15.54% de la mostra, però 
+# P(occupation=Services/Ethnicity=Cauc) = 0.1363 només són el 13.63% en el grup dels caucassics
+# 2) P(Ethnicity=Cauc/occupation=Services) = 0.72 o 72% dels qui occupation is services són caucàssics
+# $cauc
+#                      Cla/Mod  Mod/Cla   Global     p.value    v.test
+# region=other        85.44974 73.40909 70.78652 0.005101815  2.800534
+# occupation=services 72.28916 13.63636 15.54307 0.012445928 -2.499242
+# region=south        75.00000 26.59091 29.21348 0.005101815 -2.800534
+
+res.cat$quanti # Mitjana wage dels caucàsics és 13.17 > 13.02 mitjana global de wage
+
+```
+

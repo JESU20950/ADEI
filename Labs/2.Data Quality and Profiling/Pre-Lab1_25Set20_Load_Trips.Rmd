@@ -85,8 +85,8 @@ if(!is.null(dev.list())) dev.off()
 # Clean workspace
 rm(list=ls())
 
-setwd("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS")
-filepath<-"C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS/"
+setwd("~/Desktop/NYCABS")
+filepath<-"~/Desktop/NYCABS/"
 # green_tripdata_2016-01
 
 df<-read.table(paste0(filepath,"green_tripdata_2016-01.csv"),header=T, sep=",")
@@ -301,6 +301,28 @@ df$period[df$hour>19]<-1
 df$period<-factor(df$period,labels=paste("Period",c("night","morning","valley","afternoon")))
 ```
 
+## Multivariant Outliers
+
+```{r}
+library(mvoutlier)
+
+ll<-which(is.na(df$Total_amount))
+dff<-df[-ll,]
+summary(dff[,vars_con])
+# aq.plot(dff[,c(vars_res,vars_con)]) # It doesn't work
+names(dff)
+# mout<-aq.plot(dff[,c(12,19,24:26)],delta=qchisq(0.995,5),quan=0.75)
+
+library(chemometrics)
+summary(dff[,c(12,19,24:26)])
+mout<-Moutlier(dff[,c(12,19,24:27)],quantile = 0.995, plot = TRUE)
+
+ll<-which(mout$rd>500)
+Boxplot(mout$rd)
+df[ll,c(vars_res,vars_con)]
+```
+
+
 ## Imputation of numeric variables
 
 ```{r}
@@ -308,7 +330,7 @@ library(missMDA)
 # Now one by one describe vars and put them on lists
 names(df)
 vars_con<-names(df)[c(10:16,18,24:27)]
-vars_dis<-names(df)[c(1,4,5,20:21,28)]
+vars_con<-names(df)[c(1,4,5,20:21,28)]
 vars_res<-names(df)[c(19)]
 
 summary(df[,vars_con])
@@ -367,46 +389,6 @@ pie(table(df$AnyTip),col=heat.colors(2),labels=paste(piepercent,"%"))
 legend("topright", levels(df$AnyTip), cex = 0.8, fill = heat.colors(2))
 # Bar Chart
 barplot(table(df$AnyTip),main="Barplot Final Decision Factor",col=c("green","red"))
-```
-
-
-## Definition of binary outcome: AnyTip
-
-Create binary target, define lists of numeric and qualitative variables and save your raw base database
-
-```{r}
-# Binary Target: Any Tip?
-
-df$AnyTip<-ifelse(df$Tip_amount<0.0001,0,1)
-df$AnyTip<-factor(df$AnyTip,labels=paste("AnyTip",c("No","Yes")))
-
-# Now one by one describe vars and update lists
-names(df)
-#vars_con<-names(df)[c(6:18,23:26)]
-#vars_dis<-names(df)[c(1,4,5,19,20,27:28)]
-#vars_res<-names(df)[c(18,29)]
-
-```
-
-## Multivariant Outliers
-
-```{r}
-library(mvoutlier)
-
-ll<-which(is.na(df$Total_amount))
-dff<-df[-ll,]
-summary(dff[,vars_con])
-# aq.plot(dff[,c(vars_res,vars_con)]) # It doesn't work
-names(dff)
-# mout<-aq.plot(dff[,c(12,19,24:26)],delta=qchisq(0.995,5),quan=0.75)
-
-library(chemometrics)
-summary(dff[,c(12,19,24:26)])
-mout<-Moutlier(dff[,c(12,19,24:27)],quantile = 0.995, plot = TRUE)
-
-ll<-which(mout$rd>500)
-Boxplot(mout$rd)
-df[ll,c(vars_res,vars_con)]
 ```
 
 
