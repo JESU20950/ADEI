@@ -120,9 +120,13 @@ countX <- function(x,X) {
   for (j in 1:ncol(x)) {nx_i <- nx_i + as.numeric(x[,j]==X) }
   list(nx_col=n_x,nx_ind=nx_i) }
 
-EDA_Univariant <- function(x,title){
+EDA_Univariant <- function(x,title,bins){
+  listOfColors<-rainbow(39)
   if(missing(title)) {
         title<-""
+  }
+  if(missing(bins)){
+      bins <- 100
   }
   x <- data.frame(x)
   print(summary(x))
@@ -133,14 +137,14 @@ EDA_Univariant <- function(x,title){
       }
       if (sapply(x, class)[i] == "numeric" || sapply(x, class)[i] == "integer"){
         print(sd(x[,i]))
-        hist(x[,i], main = paste("Histogram", title), freq = TRUE, xlab="")
+        hist(x[,i], main = paste("Histogram", title), freq = TRUE, xlab="", col =  listOfColors, breaks = bins)
         boxplot(x[,i], main = paste("Boxplot", title))
         var_out<-calcQ(df$espeed)
         abline(h=var_out$souts,col="red")
         abline(h=var_out$souti,col="blue")
       }else{
-        barplot(table(as.factor(x[,i])), main = paste("Barplot", names(x)[i]))
-        pie(table(as.factor(x[,i])), main = paste("Pie", names(x)[i]))
+        barplot(table(as.factor(x[,i])), main = paste("Barplot", title), col =  listOfColors)
+        pie(table(as.factor(x[,i])), main = paste("Pie", title), col =  listOfColors)
       }
   }
   par(mfrow=c(1,1))
@@ -168,24 +172,16 @@ levels(df$Payment_type)<-paste0("f.PayType-",levels(df$Payment_type))
 summary(df$Payment_type)
 nlevels(df$Payment_type)
 
-df_datatime <- t(as.data.frame(strsplit(as.character(df$lpep_pickup_datetime), " ")))
-df$lpep_pickup_date <- factor(df_datatime[,1])
-df$lpep_pickup_time <- factor(df_datatime[,2])
-
 
 colnames(df)[which(names(df) == "Lpep_dropoff_datetime")] <- "lpep_dropoff_datetime"
-df_datatime <- t(as.data.frame(strsplit(as.character(df$lpep_dropoff_datetime), " ")))
-df$lpep_dropoff_date <- factor(df_datatime[,1])
-df$lpep_dropoff_time <- factor(df_datatime[,2])
+
 
 summary(df$Store_and_fwd_flag)
-df$Store_and_fwd_flag <- df$Store_and_fwd_flag == "Y"
+df$Store_and_fwd_flag <- as.factor(df$Store_and_fwd_flag == "Y")
 
 summary(df$improvement_surcharge)
 colnames(df)[which(names(df) == "improvement_surcharge")] <- "Improvement_surcharge"
 
-
-df$Ehail_fee<-NULL
 ```
 
 
@@ -231,7 +227,7 @@ barplot(table(df$RateCodeID))
 #Variable Passenger_count
 
 hist(df$Passenger_count, main="Histogram of Passenger_count")
-Boxplot(df$Passenger_count, main="Boxplot of Passenger_count")
+boxplot(df$Passenger_count, main="Boxplot of Passenger_count")
 summary(df$Passenger_count)
 
 # errors
@@ -244,17 +240,25 @@ df[l,"Passenger_count"]<-NA
 
 
 hist(df$Passenger_count, main="Histogram of Passenger_count")
-Boxplot(df$Passenger_count, main="Boxplot of Passenger_count")
+boxplot(df$Passenger_count, main="Boxplot of Passenger_count")
 summary(df$Passenger_count)
 
 
 #Variable Trip_distance
 summary(df$Trip_distance)
-#errors ->correct
+# errors
+l <- which(df$Trip_distance<0.001);length(l)
+if (length(l)>0) {
+  ierrs[l]<-ierrs[l]+1
+  jerrs["Trip_distance"]<-length(l)
+}
+df[l,"Trip_distance"]<-NA 
+
+
 
 #outliers
 hist(df$Trip_distance, main="Histogram of Trip_distance")
-Boxplot(df$Trip_distance, main="Boxplot of Trip_distance")
+boxplot(df$Trip_distance, main="Boxplot of Trip_distance")
 var_out<-calcQ(df$Trip_distance)
 abline(h=var_out$souts,col="red")
 abline(h=var_out$souti,col="blue")
@@ -265,19 +269,28 @@ jouts["Trip_distance"]<-length(l)
 
 
 ### Variable Pickup_latitude
+l<-which(df$Pickup_latitude ==0)
+ierrs[l]<-ierrs[l]+1
+jerrs["Pickup_latitude"]<-length(l)
+df[l,"Pickup_latitude"]<-NA    
 
-summary(df$Pickup_latitude)
-#0.00 looks to be an error
-# Seeing the individuals with this "0" value:
-df[which(df[,"Pickup_latitude"]==0),]
+### Variable Pickup_longitude
+l<-which(df$Pickup_longitude ==0)
+ierrs[l]<-ierrs[l]+1
+jerrs["Pickup_longitude"]<-length(l)
+df[l,"Pickup_longitude"]<-NA    
 
-# It is a quantitive variable  Non-possible values will be recoded to NA
-sel<-which(df$Pickup_latitude ==0)
-ierrs[sel]<-ierrs[sel]+1
-jerrs["Pickup_latitude"]<-length(sel)
-sel                 #### sel contains the rownames of the individuals with "0" 
-#                        as  value for longitude
-df[sel,"Pickup_latitude"]<-NA    # non-possible values are replaced by NA, missing value symbol in R
+### Variable Dropoff_latitude
+l<-which(df$Dropoff_latitude ==0)
+ierrs[l]<-ierrs[l]+1
+jerrs["Dropoff_latitude"]<-length(l)
+df[l,"Dropoff_latitude"]<-NA    
+
+### Variable Dropoff_longitude
+l<-which(df$Dropoff_longitude ==0)
+ierrs[l]<-ierrs[l]+1
+jerrs["Dropoff_longitude"]<-length(l)
+df[l,"Dropoff_longitude"]<-NA  
 
 
 
@@ -298,14 +311,14 @@ barplot(table(df$Payment_type))
 
 l <- which(df$Payment_type != "f.PayType-Credit card" & df$Payment_type != "f.PayType-Cash" )
 df$Payment_type <- as.character(df$Payment_type)
-df[l,"Payment_type"] <- "Others"
+df[l,"Payment_type"] <- "f.PayType-Others"
 df$Payment_type <- as.factor(df$Payment_type )
 summary(df$Payment_type)
 barplot(table(df$Payment_type))
 
 ## Variable Fare_amount
 hist(df$Fare_amount, main="Histogram of Fare_amount")
-Boxplot(df$Fare_amount, main="Boxplot of Fare_amount")
+boxplot(df$Fare_amount, main="Boxplot of Fare_amount")
 summary(df$Fare_amount)
 
 # errors
@@ -317,7 +330,7 @@ if (length(l)>0) {
 df[l,"Fare_amount"]<-NA 
 
 # Outlier detection
-Boxplot(df$Fare_amount)
+boxplot(df$Fare_amount)
 var_out<-calcQ(df$Fare_amount)
 abline(h=var_out$souts,col="red")
 abline(h=var_out$souti,col="blue")
@@ -334,28 +347,26 @@ summary(df$Fare_amount)
 ## Variable Extra
 
 hist(df$Extra, main="Histogram of Extra")
-Boxplot(df$Extra, main="Boxplot of Extra")
+boxplot(df$Extra, main="Boxplot of Extra")
 summary(df$Extra)
 
 # errors
-l <- which(df$Extra<0)
+l <- which(df$Extra!= 0.5 || df$Extra != 1 || df$Extra != 0)
 if (length(l)>0) {
   ierrs[l]<-ierrs[l]+1
   jerrs["Extra"]<-length(l)
 }
-df[l,"Extra"]<-NA 
 
-# Outlier detection
-Boxplot(df$Extra)
-var_out<-calcQ(df$Extra)
-abline(h=var_out$souts,col="red")
-abline(h=var_out$souti,col="blue")
-var_out$souts
-#No outliers
+df[,"f.Extra"] <- "f.Extra-0"
+l <- which(df$Extra >0.4)
+df[l,"f.Extra"] <- "f.Extra-0.5"
+l <- which(df$Extra >0.9)
+df[l,"f.Extra"] <- "f.Extra-1"
+df[,"f.Extra"] <- as.factor(df[,"f.Extra"])
 
 ### Variable MTA_tax
 hist(df$MTA_tax, main="Histogram of MTA_tax")
-Boxplot(df$MTA_tax, main="Boxplot of MTA_tax")
+boxplot(df$MTA_tax, main="Boxplot of MTA_tax")
 summary(df$MTA_tax)
 
 # errors
@@ -366,16 +377,14 @@ if (length(l)>0) {
 }
 df[l,"MTA_tax"]<-NA 
 
-df[,"MTA_tax"] <- df[,"MTA_tax"] == 0.5
+df[,"MTA_tax"] <- as.factor(df[,"MTA_tax"] == 0.5)
 barplot(table(df[,"MTA_tax"]))
 summary(df[,"MTA_tax"] )
 
 #it is not a useful information because in theory it is always 0.5$.
 
 ### Variable Improvement_surcharge
-hist(df$Improvement_surcharge, main="Histogram of Improvement_surcharge")
-Boxplot(df$Improvement_surcharge, main="Boxplot of Improvement_surcharge")
-summary(df$Improvement_surcharge)
+EDA_Univariant(df[,"Improvement_surcharge"],Improvement_surcharge)
 
 # errors
 l <- which(df$Improvement_surcharge<0)
@@ -384,15 +393,14 @@ if (length(l)>0) {
   jerrs["Improvement_surcharge"]<-length(l)
 }
 df[l,"Improvement_surcharge"]<-NA 
-df[,"Improvement_surcharge"] <- df[,"Improvement_surcharge"] == 0.3
-barplot(table(df[,"Improvement_surcharge"]))
-summary(df[,"Improvement_surcharge"] )
+df[,"Improvement_surcharge"] <- as.factor(df[,"Improvement_surcharge"] == 0.3)
+EDA_Univariant(df[,"Improvement_surcharge"],Improvement_surcharge)
 
 #it is not a useful information because in theory it is always 0.3$.
 
 # Variable Tip_amount
 hist(df$Tip_amount, main="Histogram of Tip_amount")
-Boxplot(df$Tip_amount, main="Boxplot of Tip_amount")
+boxplot(df$Tip_amount, main="Boxplot of Tip_amount")
 summary(df$Tip_amount)
 
 # errors
@@ -404,7 +412,7 @@ if (length(l)>0) {
 df[l,"Tip_amount"]<-NA 
 
 # Outlier detection
-Boxplot(df$Tip_amount)
+boxplot(df$Tip_amount)
 var_out<-calcQ(df$Tip_amount)
 abline(h=var_out$souts,col="red")
 abline(h=var_out$souti,col="blue")
@@ -415,14 +423,14 @@ jouts["Tip_amount"]<-length(l)
 df[l,"Tip_amount"]<-NA 
 
 hist(df$Tip_amount, main="Histogram of Tip_amount")
-Boxplot(df$Tip_amount, main="Boxplot of Tip_amount")
+boxplot(df$Tip_amount, main="Boxplot of Tip_amount")
 summary(df$Tip_amount)
 
 
 ### Variable Tolls_amount
 
 hist(df$Tolls_amount, main="Histogram of Tolls_amount")
-Boxplot(df$Tolls_amount, main="Boxplot of Tolls_amount")
+boxplot(df$Tolls_amount, main="Boxplot of Tolls_amount")
 summary(df$Tolls_amount)
 
 # errors
@@ -434,7 +442,7 @@ if (length(l)>0) {
 df[l,"Tolls_amount"]<-NA 
 
 # Outlier detection
-Boxplot(df$Tolls_amount)
+boxplot(df$Tolls_amount)
 var_out<-calcQ(df$Tolls_amount)
 abline(h=var_out$souts,col="red")
 abline(h=var_out$souti,col="blue")
@@ -445,7 +453,7 @@ jouts["Tolls_amount"]<-length(l)
 df[l,"Tolls_amount"]<-NA 
 
 hist(df$Tolls_amount, main="Histogram of Tolls_amount")
-Boxplot(df$Tolls_amount, main="Boxplot of Tolls_amount")
+boxplot(df$Tolls_amount, main="Boxplot of Tolls_amount")
 summary(df$Tolls_amount)
 
 
@@ -462,7 +470,7 @@ if (length(l)>0) {
 df[l,"Total_amount"]<-NA
 
 # Outlier detection
-Boxplot(df$Total_amount)
+boxplot(df$Total_amount)
 var_out<-calcQ(df$Total_amount)
 abline(h=var_out$souts,col="red")
 abline(h=var_out$souti,col="blue")
@@ -472,24 +480,128 @@ jouts["Total_amount"]<-length(l)
 df[l,"Total_amount"]<-NA 
 
 
+### Variable Ehail_fee
+summary(df$Ehail_fee)
+df$Ehail_fee<-NULL
+
 ```
 
+
+
+
+
+## Define new variables
+
+Create new variables derived from the original ones, as effective speed, travel time, hour of request, period of request, effective trip distance (in km) 
+
+```{r}
+# Trip length in km
+df$tlenkm<-df$Trip_distance*1.609344 # Miles to km
+summary(df$tlenkm)
+
+# Travel time in min
+df$traveltime<-(as.numeric(as.POSIXct(df$lpep_dropoff_datetime)) - as.numeric(as.POSIXct(df$lpep_pickup_datetime)))/60
+
+#errors
+summary(df$traveltime)
+l<-which(df$traveltime<0);length(l)
+if (length(l)>0) {
+  ierrs[l]<-ierrs[l]+3
+  jerrs["traveltime"]<-length(l)
+  jerrs["lpep_dropoff_datetime"] <- length(l)
+  jerrs["lpep_dropoff_datetime"] <- length(l)
+}
+df[l,"traveltime"]<-NA 
+df[l,"lpep_dropoff_datetime"] <- NA
+df[l,"lpep_pickup_datetime"] <- NA
+
+#outliers
+boxplot(df$traveltime)
+var_out<-calcQ(df$traveltime)
+abline(h=var_out$souts,col="red")
+abline(h=var_out$souti,col="blue")
+l<-which((df$traveltime<0)|(df$traveltime>800))
+iouts[l]<-iouts[l]+1
+jouts["traveltime"]<-length(l)
+df[l,"traveltime"]<-NA 
+df[l,"lpep_dropoff_datetime"] <- NA
+df[l,"lpep_pickup_datetime"] <- NA
+
+
+# Effective speed (km/h)
+df$espeed<-(df$tlenkm/(df$traveltime))*60
+summary(df$espeed)
+
+
+# errors
+summary(df$espeed)
+l<-which((df$espeed<=0)|(df$espeed=="Inf"))
+ierrs[l]<-ierrs[l]+1
+jerrs["espeed"]<-length(l)
+df[l,"espeed"]<-NA 
+
+# outliers
+summary(df$espeed)
+Boxplot(df$espeed)
+var_out<-calcQ(df$espeed)
+abline(h=var_out$souts,col="red")
+abline(h=var_out$souti,col="blue")
+
+l<-which((df$espeed<=3)|(df$espeed>240))
+iouts[l]<-iouts[l]+1
+jouts["espeed"]<-length(l)
+df[l,"espeed"]<-NA 
+
+
+
+df$lpep_pickup_time<-as.numeric(substr(strptime(df$lpep_pickup_datetime, "%Y-%m-%d %H:%M:%S"),12,13))
+df$lpep_pickup_period<-1
+df$lpep_pickup_period[df$lpep_pickup_time>7]<-2
+df$lpep_pickup_period[df$lpep_pickup_time>10]<-3
+df$lpep_pickup_period[df$lpep_pickup_time>16]<-4
+df$lpep_pickup_period[df$lpep_pickup_time>19]<-1
+df$lpep_pickup_period<-factor(df$lpep_pickup_period,labels=paste("Period",c("night","morning","valley","afternoon")))
+df$lpep_dropoff_time<-as.numeric(substr(strptime(df$lpep_dropoff_datetime, "%Y-%m-%d %H:%M:%S"),12,13))
+df$lpep_dropoff_period<-1
+df$lpep_dropoff_period[df$lpep_dropoff_time>7]<-2
+df$lpep_dropoff_period[df$lpep_dropoff_time>10]<-3
+df$lpep_dropoff_period[df$lpep_dropoff_time>16]<-4
+df$lpep_dropoff_period[df$lpep_dropoff_time>19]<-1
+df$lpep_dropoff_period<-factor(df$lpep_dropoff_period,labels=paste("Period",c("night","morning","valley","afternoon")))
+
+
+library(geosphere) 
+df$distHaversine <-distHaversine(df[,c("Pickup_longitude", "Pickup_latitude")],
+              df[,c("Dropoff_longitude", "Dropoff_latitude")])/1000
+# Errors
+summary(df$distHaversine)
+l<-which((df$distHaversine<0)|(df$distHaversine=="Inf"))
+ierrs[l]<-ierrs[l]+1
+jerrs["distHaversine"]<-length(l)
+df[l,"distHaversine"]<-NA 
+
+## Variable lpep_pickup_date, 
+
+df_datatime <- t(as.data.frame(strsplit(as.character(df$lpep_pickup_datetime), " ")))
+df$lpep_pickup_date <- factor(df_datatime[,1])
+
+
+```
 
 
 
 ## Imputation of qualitative variables
 
 ```{r}
-#MCA no es necesario ya que no hay variables categoricas con nulos.
 
-#vars_dis <- c("VendorID","lpep_pickup_datetime", "lpep_dropoff_datetime", "RateCodeID","Payment_type", "Store_and_fwd_flag", "lpep_pickup_period", "lpep_dropoff_period", "Trip_type", "lpep_pickup_period", "lpep_dropoff_period")
-
-#summary(df[,vars_dis])
-#res.immca<-imputeMCA(df[,vars_dis],ncp=10)
-#summary(res.immca$completeObs)
-
-# Check one by one
-#df[ , vars_dis]<-res.immca$completeObs  
+# vars_dis <- c( "lpep_pickup_datetime", "lpep_dropoff_datetime", "MTA_tax", "Improvement_surcharge")
+# 
+# summary(df[,vars_dis])
+# res.immca<-imputeMCA(df[,vars_dis],ncp=10)
+# summary(res.immca$completeObs)
+# 
+# # Check one by one
+# df[ , vars_dis]<-res.immca$completeObs  
 
 ```
 
@@ -500,23 +612,44 @@ df[l,"Total_amount"]<-NA
 names(df)
 summary(df)
 #vars_con
-vars_con <- c( "Passenger_count", "Trip_distance", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "Extra", "MTA_tax", "Improvement_surcharge", "Tip_amount", "Tolls_amount", "Total_amount")
+vars_con <- c("Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "Tip_amount", "Tolls_amount", "Total_amount", "espeed", "traveltime", "tlenkm", "distHaversine")
 
 summary(df[,vars_con])
-res.impca<-imputePCA(df[,vars_con],ncp=10)
+res.impca<-imputePCA(df[,vars_con],ncp=6)
 summary(res.impca$completeObs)
-
-
 df[ ,vars_con]<-res.impca$completeObs
 summary(df[,vars_con])
+
+# Check one by one
+
+#espeed
+l<-which(df[,"espeed"]<0)
+df[l,"espeed"]<-0.001
+
+#Trip_distance
+l<-which(df[,"Trip_distance"]<0)
+df[l,"Trip_distance"]<-0.001
+
+#traveltime
+l<-which(df[,"traveltime"]<0)
+df[l,"traveltime"]<-0.001
+
+#tlenkm
+l<-which(df[,"tlenkm"]<0)
+df[l,"tlenkm"]<-0.001
+
+#distHaversine
+l<-which(df[,"distHaversine"]<0)
+df[l,"distHaversine"]<-0.001
+
+
+summary(df)
 ```
-
-
 
 ## Multivariant Outliers
 
 ```{r}
-vars_con <- c( "Trip_distance","Fare_amount", "Total_amount")
+vars_con <- c( "tlenkm","Fare_amount", "Total_amount")
 summary(df[,vars_con])
 aq.plot(df[,vars_con],delta=qchisq(0.995,length(vars_con)),quan=0.75)
 mout<-Moutlier(df[,vars_con],quantile = 0.995, plot = TRUE)
@@ -527,107 +660,34 @@ text(mout$md,mout$rd,labels=vars_con)
 Boxplot(mout$rd)
 summary(mout$rd)
 l<-which(mout$rd>50);length(l)
-df <- df[-l,]
-```
-
-## Define new variables
-
-Create new variables derived from the original ones, as effective speed, travel time, hour of request, period of request, effective trip distance (in km) 
-
-```{r}
-# New variables
-
-# Trip length in km
-df$tlenkm<-df$Trip_distance*1.609344 # Miles to km
-# Travel time in min
-df$traveltime<-(as.numeric(as.POSIXct(df$lpep_dropoff_datetime)) - as.numeric(as.POSIXct(df$lpep_pickup_datetime)))/60
-
-
-# Effective speed (km/h)
-df$espeed<-(df$tlenkm/(df$traveltime))*60
-
-# Missing data
-l<-which(is.na(df$espeed));length(l)
-imis[l]<-imis[l]+1
-jmis["espeed"]<-length(l)
-
-# Error detection
-summary(df$espeed)
-l<-which((df$espeed<=0)|(df$espeed=="Inf"))
-ierrs[l]<-ierrs[l]+1
-jerrs["espeed"]<-length(l)
-df[l,"espeed"]<-NA 
-
-# Check outliers
-summary(df$espeed)
-calcQ(df$espeed)
-# Outlier detection
-Boxplot(df$espeed)
-var_out<-calcQ(df$espeed)
-abline(h=var_out$souts,col="red")
-abline(h=var_out$souti,col="blue")
-
-llout<-which((df$espeed<=3)|(df$espeed>240))
-iouts[llout]<-iouts[llout]+1
-jouts["espeed"]<-length(llout)
-df[llout,"espeed"]<-NA 
-
-
-df$lpep_pickup_hour<-as.numeric(substr(strptime(df$lpep_pickup_datetime, "%Y-%m-%d %H:%M:%S"),12,13))
-df$lpep_pickup_period<-1
-df$lpep_pickup_period[df$lpep_pickup_hour>7]<-2
-df$lpep_pickup_period[df$lpep_pickup_hour>10]<-3
-df$lpep_pickup_period[df$lpep_pickup_hour>16]<-4
-df$lpep_pickup_period[df$lpep_pickup_hour>19]<-1
-df$lpep_pickup_period<-factor(df$lpep_pickup_period,labels=paste("Period",c("night","morning","valley","afternoon")))
-df$lpep_dropoff_hour<-as.numeric(substr(strptime(df$lpep_dropoff_datetime, "%Y-%m-%d %H:%M:%S"),12,13))
-df$lpep_dropoff_period<-1
-df$lpep_dropoff_period[df$lpep_dropoff_hour>7]<-2
-df$lpep_dropoff_period[df$lpep_dropoff_hour>10]<-3
-df$lpep_dropoff_period[df$lpep_dropoff_hour>16]<-4
-df$lpep_dropoff_period[df$lpep_dropoff_hour>19]<-1
-df$lpep_dropoff_period<-factor(df$lpep_dropoff_period,labels=paste("Period",c("night","morning","valley","afternoon")))
-
-
-library(geosphere) 
-df$distHaversine <-distHaversine(df[,c("Pickup_longitude", "Pickup_latitude")],
-              df[,c("Dropoff_longitude", "Dropoff_latitude")])/1000
-
+df[,"multiouts"] <- FALSE
+df[l,"multiouts"] <- TRUE
+df[,"multiouts"] <- as.factor(df[l,"multiouts"])
 ```
 
 ## Discretization 
 
 ```{r}
-####    Discretization of all variables
-
 ## Variable espeed
 
 summary(df[,vars_con])
 
-varaux<-factor(cut(df$espeed,breaks=quantile(df$espeed,seq(0,1,0.1),na.rm=TRUE),include.lowest = T ))
+varaux<-factor(cut(df$espeed,breaks=quantile(df$espeed,seq(0,1,0.25),na.rm=TRUE),include.lowest = T ))
 summary(varaux)
 tapply(df$espeed,varaux,median)  #tapply(X, INDEX, FUN = NULL) map function
-df$f.espeed<-factor(cut(df$espeed,breaks=quantile(df$espeed,seq(0,1,0.1),na.rm=TRUE),include.lowest = T ))
+df$f.espeed<-factor(cut(df$espeed,breaks=c(0,25,max(df$espeed),na.rm=TRUE),include.lowest = T ))
 levels(df$f.espeed)<-paste("f.espeed-",levels(df$f.espeed),sep="")
-
-## Variable Trip_distance
-
-varaux<-factor(cut(df$Trip_distance,breaks=quantile(df$Trip_distance,seq(0,1,0.25),na.rm=TRUE),include.lowest = T ))
-summary(varaux)
-tapply(df$Trip_distance,varaux,median)  #tapply(X, INDEX, FUN = NULL) map function
-df$f.Trip_distance<-factor(cut(df$Trip_distance,breaks=quantile(df$Trip_distance,seq(0,1,0.25),na.rm=TRUE),include.lowest = T ))
-levels(df$f.Trip_distance)<-paste("f.Trip_distance-",levels(df$f.Trip_distance),sep="")
 
 ## Variable tlenkm
 summary(df$tlenkm)
 varaux<-factor(cut(df$tlenkm,breaks=quantile(df$tlenkm,seq(0,1,0.25),na.rm=TRUE),include.lowest = T ))
 summary(varaux)
-df$f.tlenkm<-factor(ifelse(df$tlenkm<6, "f.tlenkm-short", "f.tlenkm-long"))
-summary(df$f.tlenkm)
+df$f.tlenkm<-factor(cut(df$tlenkm,breaks=c(0,5,max(df$tlenkm),na.rm=TRUE),include.lowest = T ))
+levels(df$f.tlenkm)<-paste("f.tlenkm-",levels(df$f.tlenkm),sep="")
 
 ## Variable traveltime
 summary(df$traveltime)
-varaux<-factor(cut(df$traveltime,breaks=c(0,5,40,max(df$traveltime)),include.lowest = T ))
+varaux<-factor(cut(df$traveltime,breaks=c(0,15,40,max(df$traveltime)),include.lowest = T ))
 summary(varaux)
 df$f.traveltime <- varaux
 levels(df$f.traveltime)<-paste("f.traveltime-",levels(df$f.traveltime),sep="")
@@ -637,10 +697,10 @@ levels(df$f.traveltime)<-paste("f.traveltime-",levels(df$f.traveltime),sep="")
 varaux<-factor(cut(df$distHaversine,breaks=quantile(df$distHaversine,seq(0,1,0.25),na.rm=TRUE),include.lowest = T ))
 summary(varaux)
 tapply(df$distHaversine,varaux,median)  #tapply(X, INDEX, FUN = NULL) map function
-df$f.distHaversine<-factor(cut(df$distHaversine,breaks=quantile(df$distHaversine,seq(0,1,0.25),na.rm=TRUE),include.lowest = T ))
+df$f.distHaversine<-factor(cut(df$distHaversine,breaks=c(0,5,10,max(df$distHaversine)),include.lowest = T ))
 levels(df$f.distHaversine)<-paste("f.distHaversine-",levels(df$f.distHaversine),sep="")
 
-# Variable Tolls_amount
+# Variable AnyToll
 Boxplot(df$Tolls_amount)
 varaux<-factor(cut(df$Tolls_amount,breaks=c(0,0.01,max(df$Tolls_amount)),include.lowest = T ))
 df$AnyToll <- df$Tolls_amount < 0.01
@@ -648,32 +708,97 @@ df$AnyToll<-factor(df$AnyToll,labels=paste("AnyToll",c("No","Yes")))
 summary(df$AnyToll)  
 
 
-## Variable Tip_amount
+## Variable AnyTip
 
 df$AnyTip<-ifelse(df$Tip_amount<0.01,0,1)
 df$AnyTip<-factor(df$AnyTip,labels=paste("AnyTip",c("No","Yes")))
-summary(df$AnyTip)
-# Pie
-piepercent<-round(100*(table(df$AnyTip)/nrow(df)),dig=2); piepercent
-pie(table(df$AnyTip),col=heat.colors(2),labels=paste(piepercent,"%"))
-legend("topright", levels(df$AnyTip), cex = 0.8, fill = heat.colors(2))
-# Bar Chart
-barplot(table(df$AnyTip),main="Barplot Final Decision Factor",col=c("green","red"))
+
 
 ```
 
-## Data Quality report (missings/errors/outliers) and remove observations with missings in targets
+## Data Quality report (missings/errors/outliers)
 
 ```{r}
 
+#Variable missings
+EDA_Univariant(jmis,"Missings")
+pie(jmis, labels=names(jmis),main = "Pie jmis")
+jmis["Ehail_fee"] 
 
+### Variable errors
+l <-which(ierrs>1)
+pie(ierrs[l], labels = 1:length(l))
+l <-which(ierrs>2)
+pie(ierrs[l], labels = 1:length(l))
+l <-which(ierrs>3)
+pie(ierrs[l], labels = 1:length(l))
+summary(jerrs)
+pie(jerrs, labels=names(jerrs),main = "Pie jerrs")
 
+### Variable outliers
+l <-which(iouts>1)
+pie(iouts[l], labels = 1:length(l))
+l <-which(iouts>2)
+pie(iouts[l], labels = 1:length(l))
+summary(jouts)
+pie(jouts, labels=names(jouts),main = "Pie jouts")
 ```
 
 ## Univariant Exploratory Analysis (EDA)
 
 ```{r}
-EDA_Univariant(df[,vars_con[1]])
+summary(df)
+vars_dis <- c("VendorID", "RateCodeID","Payment_type", "Store_and_fwd_flag", "lpep_pickup_period", "lpep_dropoff_period", "Trip_type", "lpep_pickup_period", "lpep_dropoff_period")
+vars_con <- c( "Passenger_count", "Trip_distance", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "Extra", "MTA_tax", "Improvement_surcharge", "Tip_amount", "Tolls_amount", "Total_amount")
+
+
+#VendorID
+EDA_Univariant(df[,"VendorID"],"VendorID")
+
+#lpep_pickup_period, lpep_pick_hour, traveltime, f.traveltime
+EDA_Univariant(df[,c("lpep_pickup_time", "lpep_pickup_period","traveltime","f.traveltime")])
+
+
+#tlenkm
+EDA_Univariant(df[,c("tlenkm","f.tlenkm")])
+
+#espeed
+
+EDA_Univariant(df[,c("espeed","f.espeed")])
+
+
+#RateCodeID
+EDA_Univariant(df[,"RateCodeID"],"RateCodeID")
+
+#Points
+plot(df$Dropoff_longitude, df$Dropoff_latitude, pch = 20, col = "blue" , xlab="longitude", ylab="latitudel")
+points(df$Pickup_longitude, df$Pickup_latitude, pch = 20, col = "red")
+legend("topleft", legend=c("Dropoff", "Pickup"),
+       col=c("blue", "red"), lty=1)
+
+
+
+#Store_and_fwd_flag
+EDA_Univariant(df[,c("Store_and_fwd_flag")], "Store_and_fwd_flag")
+
+#Passenger_count
+EDA_Univariant(df[,c("Passenger_count")], "Passenger_count")
+
+#Payment_type
+EDA_Univariant(df[,c("Payment_type")], "Payment_type")
+
+
+#Extra, MTA_tax, Improvement_surcharge
+EDA_Univariant(df[,c("f.Extra", "MTA_tax", "Improvement_surcharge")])
+
+
+#Fare_amount, Tip_amount, Tolls_amount, Total_amount
+EDA_Univariant(df[,c("Fare_amount", "Tip_amount", "Tolls_amount", "Total_amount")])
+EDA_Univariant(df[,c("AnyTip", "AnyToll")])
+
+#Trip_type
+EDA_Univariant(df[,c("Trip_type")])
+
 ```
 
 
