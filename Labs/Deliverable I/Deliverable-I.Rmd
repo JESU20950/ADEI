@@ -82,7 +82,6 @@ df2<-read.table(paste0(filepath,"green_tripdata_2016-01.csv"),header=T, sep=",")
 dim(df2)
 names(df2)
 head(df2)
-### Use birthday of 1 member of the group
 ```
 
 ## Select a sample of 5000 records
@@ -498,11 +497,8 @@ df[l,"Total_amount"]<-NA
 ## Imputation of numeric variables
 
 ```{r}
-library(missMDA)
-
 names(df)
 summary(df)
-
 #vars_con
 vars_con <- c( "Passenger_count", "Trip_distance", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "Extra", "MTA_tax", "Improvement_surcharge", "Tip_amount", "Tolls_amount", "Total_amount")
 
@@ -512,8 +508,7 @@ summary(res.impca$completeObs)
 
 
 df[ ,vars_con]<-res.impca$completeObs
-
-df[ ,vars_con]
+summary(df[,vars_con])
 ```
 
 
@@ -521,18 +516,18 @@ df[ ,vars_con]
 ## Multivariant Outliers
 
 ```{r}
-# library(chemometrics)
-# summary(df[,vars_con])
-# aq.plot(df[,vars_con],delta=qchisq(0.995,length(vars_con)),quan=0.75)
-# mout<-Moutlier(df[,vars_con],quantile = 0.995, plot = TRUE)
-# par(mfrow=c(1,1))
-# plot(mout$md,mout$rd, type="n")
-# text(mout$md,mout$rd,labels=rownames(SwissLabor[,2:4]))
-# 
-# Boxplot(mout$rd)
-# summary(mout$rd)
-# l<-which(mout$rd>30)
-# df[l,c(vars_res,vars_con)]
+vars_con <- c( "Trip_distance","Fare_amount", "Total_amount")
+summary(df[,vars_con])
+aq.plot(df[,vars_con],delta=qchisq(0.995,length(vars_con)),quan=0.75)
+mout<-Moutlier(df[,vars_con],quantile = 0.995, plot = TRUE)
+par(mfrow=c(1,1))
+plot(mout$md,mout$rd, type="n")
+text(mout$md,mout$rd,labels=vars_con)
+
+Boxplot(mout$rd)
+summary(mout$rd)
+l<-which(mout$rd>50);length(l)
+df <- df[-l,]
 ```
 
 ## Define new variables
@@ -685,13 +680,7 @@ EDA_Univariant(df[,vars_con[1]])
 ## Profiling
 
 ```{r}
-##############################################################################
-#                                    Profiling 
-#                           Package FactoMineR will be used
-##############################################################################
-#library(FactoMineR)
-#summary(df$Total_amount)
-# The "variable to describe cannot have NA ###################################
+
 # res.condes<-condes(df,which(names(df)=="Total_amount"))  # Takes a lot
 #res.condes<-condes(df[,c(vars_res,vars_con,vars_dis)],1)
 
