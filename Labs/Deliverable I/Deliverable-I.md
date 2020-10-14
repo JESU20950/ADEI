@@ -124,32 +124,10 @@ Load Required Packages: to be increased over the course
 
     ## Loading required package: knitr
 
-Select a sample of 5000 records
--------------------------------
-
-    # Clear plots
-    if(!is.null(dev.list())) dev.off()
-
-    # Clean workspace
-    rm(list=ls())
-
-    #setwd("C:/Users/carle/Desktop/ADEI2")
-    #filepath<-"C:/Users/carle/Desktop/ADEI2/"
-    # green_tripdata_2016-01
-
-    setwd("~/Desktop/NYCABS")
-    filepath<-"~/Desktop/NYCABS/"
-    # green_tripdata_2016-01
-
-    df2<-read.table(paste0(filepath,"green_tripdata_2016-01.csv"),header=T, sep=",")
-
-\#reload data
-
-    dim(df2)
+    ## null device 
+    ##           1
 
     ## [1] 1445285      21
-
-    names(df2)
 
     ##  [1] "VendorID"              "lpep_pickup_datetime"  "Lpep_dropoff_datetime"
     ##  [4] "Store_and_fwd_flag"    "RateCodeID"            "Pickup_longitude"     
@@ -158,8 +136,6 @@ Select a sample of 5000 records
     ## [13] "Extra"                 "MTA_tax"               "Tip_amount"           
     ## [16] "Tolls_amount"          "Ehail_fee"             "improvement_surcharge"
     ## [19] "Total_amount"          "Payment_type"          "Trip_type"
-
-    head(df2)
 
     ##   VendorID lpep_pickup_datetime Lpep_dropoff_datetime Store_and_fwd_flag
     ## 1        2  2016-01-01 00:29:24   2016-01-01 00:39:36                  N
@@ -197,65 +173,17 @@ Select a sample of 5000 records
     ## 5            2         1
     ## 6            2         1
 
-    ### Use birthday of 1 member of the group
+Select a sample of 5000 records
+-------------------------------
+
     set.seed(02041997)
     sam<-as.vector(sort(sample(1:nrow(df2),5000)))
     df<-df2[sam,]
     summary(df)
 
-    ##     VendorID              lpep_pickup_datetime         Lpep_dropoff_datetime
-    ##  Min.   :1.000   2016-01-10 03:07:32:   2      2016-01-22 00:00:00:   3     
-    ##  1st Qu.:2.000   2016-01-20 19:47:26:   2      2016-01-08 20:53:45:   2     
-    ##  Median :2.000   2016-01-01 00:02:22:   1      2016-01-09 14:00:49:   2     
-    ##  Mean   :1.779   2016-01-01 00:16:59:   1      2016-01-20 00:00:00:   2     
-    ##  3rd Qu.:2.000   2016-01-01 00:20:21:   1      2016-01-31 18:59:28:   2     
-    ##  Max.   :2.000   2016-01-01 00:20:30:   1      2016-01-01 00:06:59:   1     
-    ##                  (Other)            :4992      (Other)            :4988     
-    ##  Store_and_fwd_flag   RateCodeID    Pickup_longitude Pickup_latitude
-    ##  N:4983             Min.   :1.000   Min.   :-74.16   Min.   : 0.00  
-    ##  Y:  17             1st Qu.:1.000   1st Qu.:-73.96   1st Qu.:40.69  
-    ##                     Median :1.000   Median :-73.95   Median :40.75  
-    ##                     Mean   :1.104   Mean   :-73.83   Mean   :40.69  
-    ##                     3rd Qu.:1.000   3rd Qu.:-73.92   3rd Qu.:40.80  
-    ##                     Max.   :5.000   Max.   :  0.00   Max.   :40.89  
-    ##                                                                     
-    ##  Dropoff_longitude Dropoff_latitude Passenger_count Trip_distance   
-    ##  Min.   :-74.18    Min.   : 0.00    Min.   :0.000   Min.   : 0.000  
-    ##  1st Qu.:-73.97    1st Qu.:40.70    1st Qu.:1.000   1st Qu.: 1.020  
-    ##  Median :-73.95    Median :40.75    Median :1.000   Median : 1.850  
-    ##  Mean   :-73.88    Mean   :40.71    Mean   :1.375   Mean   : 2.807  
-    ##  3rd Qu.:-73.91    3rd Qu.:40.79    3rd Qu.:1.000   3rd Qu.: 3.583  
-    ##  Max.   :  0.00    Max.   :40.94    Max.   :6.000   Max.   :42.200  
-    ##                                                                     
-    ##   Fare_amount         Extra            MTA_tax          Tip_amount    
-    ##  Min.   :-50.00   Min.   :-1.0000   Min.   :-0.5000   Min.   : 0.000  
-    ##  1st Qu.:  6.50   1st Qu.: 0.0000   1st Qu.: 0.5000   1st Qu.: 0.000  
-    ##  Median :  9.00   Median : 0.5000   Median : 0.5000   Median : 0.000  
-    ##  Mean   : 12.09   Mean   : 0.3481   Mean   : 0.4858   Mean   : 1.319  
-    ##  3rd Qu.: 14.50   3rd Qu.: 0.5000   3rd Qu.: 0.5000   3rd Qu.: 2.000  
-    ##  Max.   :400.00   Max.   : 1.0000   Max.   : 0.5000   Max.   :98.880  
-    ##                                                                       
-    ##   Tolls_amount      Ehail_fee      improvement_surcharge  Total_amount    
-    ##  Min.   : 0.00000   Mode:logical   Min.   :-0.3000       Min.   :-50.000  
-    ##  1st Qu.: 0.00000   NA's:5000      1st Qu.: 0.3000       1st Qu.:  7.872  
-    ##  Median : 0.00000                  Median : 0.3000       Median : 11.300  
-    ##  Mean   : 0.09719                  Mean   : 0.2912       Mean   : 14.633  
-    ##  3rd Qu.: 0.00000                  3rd Qu.: 0.3000       3rd Qu.: 17.300  
-    ##  Max.   :11.08000                  Max.   : 0.3000       Max.   :498.880  
-    ##                                                                           
-    ##   Payment_type     Trip_type    
-    ##  Min.   :1.000   Min.   :1.000  
-    ##  1st Qu.:1.000   1st Qu.:1.000  
-    ##  Median :2.000   Median :1.000  
-    ##  Mean   :1.515   Mean   :1.025  
-    ##  3rd Qu.:2.000   3rd Qu.:1.000  
-    ##  Max.   :4.000   Max.   :2.000  
-    ## 
-
 Some useful functions
 ---------------------
 
-    # Some useful functions
     calcQ <- function(x) {
       s.x <- summary(x)
       iqr<-s.x[5]-s.x[2]
@@ -311,8 +239,6 @@ Factors: Levels coding
 
 Now codify properly factors and remove non-informative variables
 
-    summary(df)
-
     ##     VendorID              lpep_pickup_datetime         Lpep_dropoff_datetime
     ##  Min.   :1.000   2016-01-10 03:07:32:   2      2016-01-22 00:00:00:   3     
     ##  1st Qu.:2.000   2016-01-20 19:47:26:   2      2016-01-08 20:53:45:   2     
@@ -362,8 +288,6 @@ Now codify properly factors and remove non-informative variables
     ##  Max.   :4.000   Max.   :2.000  
     ## 
 
-    names(df)
-
     ##  [1] "VendorID"              "lpep_pickup_datetime"  "Lpep_dropoff_datetime"
     ##  [4] "Store_and_fwd_flag"    "RateCodeID"            "Pickup_longitude"     
     ##  [7] "Pickup_latitude"       "Dropoff_longitude"     "Dropoff_latitude"     
@@ -372,63 +296,26 @@ Now codify properly factors and remove non-informative variables
     ## [16] "Tolls_amount"          "Ehail_fee"             "improvement_surcharge"
     ## [19] "Total_amount"          "Payment_type"          "Trip_type"
 
-    df$VendorID<-factor(df$VendorID,labels=c("Mobile","VeriFone"))
-    levels(df$VendorID)<-paste0("f.Vendor-",levels(df$VendorID))
-    summary(df$VendorID)
-
     ##   f.Vendor-Mobile f.Vendor-VeriFone 
     ##              1103              3897
-
-    df$Trip_type<-factor(df$Trip_type,labels=c("Street-Hail","Dispatch"))
-    levels(df$Trip_type)<-paste0("f.TripType-",levels(df$Trip_type))
-    summary(df$Trip_type)
 
     ## f.TripType-Street-Hail    f.TripType-Dispatch 
     ##                   4877                    123
 
-    nlevels(df$Trip_type)
-
     ## [1] 2
-
-    df$Payment_type<-factor(df$Payment_type,labels=c("Credit card","Cash","No charge","Dispute"))
-    levels(df$Payment_type)<-paste0("f.PayType-",levels(df$Payment_type))
-    summary(df$Payment_type)
 
     ## f.PayType-Credit card        f.PayType-Cash   f.PayType-No charge 
     ##                  2464                  2507                    19 
     ##     f.PayType-Dispute 
     ##                    10
 
-    nlevels(df$Payment_type)
-
     ## [1] 4
-
-    df_datatime <- t(as.data.frame(strsplit(as.character(df$lpep_pickup_datetime), " ")))
-    df$lpep_pickup_date <- factor(df_datatime[,1])
-    df$lpep_pickup_time <- factor(df_datatime[,2])
-
-
-    colnames(df)[which(names(df) == "Lpep_dropoff_datetime")] <- "lpep_dropoff_datetime"
-    df_datatime <- t(as.data.frame(strsplit(as.character(df$lpep_dropoff_datetime), " ")))
-    df$lpep_dropoff_date <- factor(df_datatime[,1])
-    df$lpep_dropoff_time <- factor(df_datatime[,2])
-
-    summary(df$Store_and_fwd_flag)
 
     ##    N    Y 
     ## 4983   17
 
-    df$Store_and_fwd_flag <- df$Store_and_fwd_flag == "Y"
-
-    summary(df$improvement_surcharge)
-
     ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
     ## -0.3000  0.3000  0.3000  0.2912  0.3000  0.3000
-
-    colnames(df)[which(names(df) == "improvement_surcharge")] <- "Improvement_surcharge"
-
-    # Remove non-informative variables
-    df$Ehail_fee<-NULL
 
     # Initialization of counts for missings, outliers and errors. All numerical variables have to be checked before
 
