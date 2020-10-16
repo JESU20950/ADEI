@@ -375,16 +375,15 @@ if (length(l)>0) {
   ierrs[l]<-ierrs[l]+1
   jerrs["MTA_tax"]<-length(l)
 }
-df[l,"MTA_tax"]<-NA 
 
-df[,"MTA_tax"] <- as.factor(df[,"MTA_tax"] == 0.5)
-barplot(table(df[,"MTA_tax"]))
-summary(df[,"MTA_tax"] )
+df[,"f.MTA_tax"] <- as.factor(ifelse(df[,"MTA_tax"] == 0.5,"f.MTA_tax_YES","f.MTA_tax_NO"))
+barplot(table(df[,"f.MTA_tax"]))
+summary(df[,"f.MTA_tax"] )
 
 #it is not a useful information because in theory it is always 0.5$.
 
 ### Variable Improvement_surcharge
-EDA_Univariant(df[,"Improvement_surcharge"],Improvement_surcharge)
+EDA_Univariant(df[,"Improvement_surcharge"],"Improvement_surcharge")
 
 # errors
 l <- which(df$Improvement_surcharge<0)
@@ -392,9 +391,8 @@ if (length(l)>0) {
   ierrs[l]<-ierrs[l]+1
   jerrs["Improvement_surcharge"]<-length(l)
 }
-df[l,"Improvement_surcharge"]<-NA 
-df[,"Improvement_surcharge"] <- as.factor(df[,"Improvement_surcharge"] == 0.3)
-EDA_Univariant(df[,"Improvement_surcharge"],Improvement_surcharge)
+df[,"f.Improvement_surcharge"] <-  as.factor(ifelse(df[,"Improvement_surcharge"] == 0.3,"f.Improvement_surcharge_YES","f.Improvement_surcharge_NO"))
+EDA_Univariant(df[,"f.Improvement_surcharge"],"Improvement_surcharge")
 
 #it is not a useful information because in theory it is always 0.3$.
 
@@ -477,7 +475,7 @@ abline(h=var_out$souti,col="blue")
 l<-which((df$Total_amount<0)|(df$Total_amount>100))
 iouts[l]<-iouts[l]+1
 jouts["Total_amount"]<-length(l)
-df[l,"Total_amount"]<-NA 
+df[l,"Total_amount"]<-NA
 
 
 ### Variable Ehail_fee
@@ -512,8 +510,7 @@ if (length(l)>0) {
   jerrs["lpep_dropoff_datetime"] <- length(l)
 }
 df[l,"traveltime"]<-NA 
-df[l,"lpep_dropoff_datetime"] <- NA
-df[l,"lpep_pickup_datetime"] <- NA
+
 
 #outliers
 boxplot(df$traveltime)
@@ -524,8 +521,6 @@ l<-which((df$traveltime<0)|(df$traveltime>800))
 iouts[l]<-iouts[l]+1
 jouts["traveltime"]<-length(l)
 df[l,"traveltime"]<-NA 
-df[l,"lpep_dropoff_datetime"] <- NA
-df[l,"lpep_pickup_datetime"] <- NA
 
 
 # Effective speed (km/h)
@@ -597,14 +592,14 @@ df$lpep_pickup_date <- factor(df_datatime[,1])
 
 ```{r}
 
-# vars_dis <- c( "lpep_pickup_datetime", "lpep_dropoff_datetime", "MTA_tax", "Improvement_surcharge")
-# 
-# summary(df[,vars_dis])
-# res.immca<-imputeMCA(df[,vars_dis],ncp=10)
-# summary(res.immca$completeObs)
-# 
-# # Check one by one
-# df[ , vars_dis]<-res.immca$completeObs  
+vars_dis <- c( "lpep_pickup_date")
+
+summary(df[,vars_dis])
+res.immca<-imputeMCA(df[,vars_dis],ncp=10)
+summary(res.immca$completeObs)
+
+# Check one by one
+df[ , vars_dis]<-res.immca$completeObs
 
 ```
 
@@ -614,8 +609,8 @@ df$lpep_pickup_date <- factor(df_datatime[,1])
 ```{r}
 names(df)
 summary(df)
-#vars_con
-vars_con <- c("Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "Tip_amount", "Tolls_amount", "Total_amount", "espeed", "traveltime", "tlenkm", "distHaversine")
+
+vars_con <- c( "Passenger_count", "tlenkm", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "espeed", "Tip_amount", "Tolls_amount", "lpep_pickup_time", "traveltime", "distHaversine","Total_amount")
 
 summary(df[,vars_con])
 res.impca<-imputePCA(df[,vars_con],ncp=6)
@@ -628,10 +623,6 @@ summary(df[,vars_con])
 #espeed
 l<-which(df[,"espeed"]<0)
 df[l,"espeed"]<-0.001
-
-#Trip_distance
-l<-which(df[,"Trip_distance"]<0)
-df[l,"Trip_distance"]<-0.001
 
 #traveltime
 l<-which(df[,"traveltime"]<0)
@@ -665,7 +656,7 @@ summary(mout$rd)
 l<-which(mout$rd>50);length(l)
 df[,"multiouts"] <- FALSE
 df[l,"multiouts"] <- TRUE
-df[,"multiouts"] <- as.factor(df[l,"multiouts"])
+df[,"multiouts"] <- as.factor(df[,"multiouts"])
 ```
 
 ## Discretization 
@@ -702,6 +693,22 @@ summary(varaux)
 tapply(df$distHaversine,varaux,median)  #tapply(X, INDEX, FUN = NULL) map function
 df$f.distHaversine<-factor(cut(df$distHaversine,breaks=c(0,5,10,max(df$distHaversine)),include.lowest = T ))
 levels(df$f.distHaversine)<-paste("f.distHaversine-",levels(df$f.distHaversine),sep="")
+
+
+# Variable Fare_amount
+summary(df$Fare_amount)
+varaux<-factor(cut(df$Fare_amount,breaks=quantile(df$Fare_amount,seq(0,1,0.25),na.rm=TRUE),include.lowest = T ))
+summary(Fare_amount)
+df$f.Fare_amount <- varaux
+levels(df$f.Fare_amount)<-paste("f.Fare_amount-",levels(df$f.Fare_amount),sep="")
+summary(df$f.Fare_amount)
+
+#Variable f.Passenger_count
+EDA_Univariant(df[,"Passenger_count"],"Passenger_count")
+df$f.Passenger_count <- "f.Passenger_count-Others"
+df$f.Passenger_count[which(df[,"Passenger_count"]== 1) ] <- "f.Passenger_count-1"
+df$f.Passenger_count[which(df[,"Passenger_count"]== 2) ] <- "f.Passenger_count-2"
+
 
 # Variable AnyToll
 Boxplot(df$Tolls_amount)
@@ -751,20 +758,29 @@ pie(jouts, labels=names(jouts),main = "Pie jouts")
 
 ```{r}
 summary(df)
-vars_dis <- c("VendorID", "RateCodeID","Payment_type", "Store_and_fwd_flag", "lpep_pickup_period", "lpep_dropoff_period", "Trip_type")
+vars_dis <- c("VendorID", "Payment_type", "Store_and_fwd_flag",  "RateCodeID", "f.Extra", "f.MTA_tax", "f.Improvement_surcharge", "lpep_pickup_period", "Trip_type", "lpep_pickup_date", "multiouts", "f.espeed", "f.tlenkm", "f.traveltime", "f.distHaversine", "AnyToll", "f.Fare_amount", "f.Passenger_count")
+for (i in vars_dis){
+  df[,i] <- as.factor(df[,i])
+}
+vars_con <- c( "Passenger_count", "tlenkm", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "espeed", "Tip_amount", "Tolls_amount", "lpep_pickup_time", "traveltime", "distHaversine")
 
-vars_con <- c( "Passenger_count", "Trip_distance", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "Extra", "MTA_tax", "Improvement_surcharge", "Tip_amount", "Tolls_amount", "Total_amount")
+vars_res <- c("AnyTip", "Total_amount")
 
+df <- df[,c(vars_dis,vars_con,vars_res)]
 
 #VendorID
 EDA_Univariant(df[,"VendorID"],"VendorID")
+
+#lpep_pickup_date
+EDA_Univariant(df[,c("lpep_pickup_date")])
+
 
 #lpep_pickup_period, lpep_pick_hour, traveltime, f.traveltime
 EDA_Univariant(df[,c("lpep_pickup_time", "lpep_pickup_period","traveltime","f.traveltime")])
 
 
-#tlenkm
-EDA_Univariant(df[,c("tlenkm","f.tlenkm")])
+#tlenkm, distHaversine
+EDA_Univariant(df[,c("tlenkm","f.tlenkm", "distHaversine","f.distHaversine")])
 
 #espeed
 
@@ -786,25 +802,24 @@ legend("topleft", legend=c("Dropoff", "Pickup"),
 EDA_Univariant(df[,c("Store_and_fwd_flag")], "Store_and_fwd_flag")
 
 #Passenger_count
-EDA_Univariant(df[,c("Passenger_count")], "Passenger_count")
+EDA_Univariant(df[,c("Passenger_count", "f.Passenger_count")])
 
 #Payment_type
 EDA_Univariant(df[,c("Payment_type")], "Payment_type")
 
 
-#Extra, MTA_tax, Improvement_surcharge
-EDA_Univariant(df[,c("f.Extra", "MTA_tax", "Improvement_surcharge")])
+#f.Extra, f.MTA_tax, f.Improvement_surcharge
+EDA_Univariant(df[,c("f.Extra", "f.MTA_tax", "f.Improvement_surcharge")])
 
 
 #Fare_amount, Tip_amount, Tolls_amount, Total_amount
 EDA_Univariant(df[,c("Fare_amount", "Tip_amount", "Tolls_amount", "Total_amount")])
-EDA_Univariant(df[,c("AnyTip", "AnyToll")])
+EDA_Univariant(df[,c("AnyTip", "AnyToll", "f.Fare_amount")])
 
 #Trip_type
 EDA_Univariant(df[,c("Trip_type")])
 
-vars_dis <- c("VendorID", "RateCodeID","Payment_type", "Store_and_fwd_flag", "lpep_pickup_period", "lpep_dropoff_period", "Trip_type", "lpep_pickup_period", "lpep_dropoff_period")
-vars_con <- c( "Passenger_count", "Trip_distance", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "Extra", "MTA_tax", "Improvement_surcharge", "Tip_amount", "Tolls_amount", "Total_amount")
+
 
 ```
 
@@ -814,20 +829,17 @@ vars_con <- c( "Passenger_count", "Trip_distance", "Pickup_longitude", "Pickup_l
 ```{r}
 
 # Total_amount
-i <- names(df)
-i <- which(i=="Total_amount")
-res.condes<-condes(df,i)  
-res.condes$quanti 
-res.condes$quali 
-res.condes$category  
+i <- which(names(df)=="Total_amount")
+res.condes<-condes(df,i)
+res.condes$quanti
+res.condes$quali
+res.condes$category
 #AnyTip
-i <- names(df)
-i <- which(i=="AnyTip")
+i <- which(names(df)=="AnyTip")
 res.cat<-catdes(df,i)
 res.cat$quanti.var
 res.cat$quanti
 res.cat$category
-
 
 
 ```
