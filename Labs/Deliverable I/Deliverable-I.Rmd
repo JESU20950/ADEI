@@ -508,7 +508,7 @@ l<-which(df$traveltime<0);length(l)
 if (length(l)>0) {
   ierrs[l]<-ierrs[l]+3
   jerrs["traveltime"]<-length(l)
-  jerrs["lpep_dropoff_datetime"] <- length(l)
+  jerrs["lpep_pickup_datetime"] <- length(l)
   jerrs["lpep_dropoff_datetime"] <- length(l)
 }
 df[l,"traveltime"]<-NA 
@@ -569,7 +569,7 @@ df$lpep_dropoff_period[df$lpep_dropoff_time>16]<-4
 df$lpep_dropoff_period[df$lpep_dropoff_time>19]<-1
 df$lpep_dropoff_period<-factor(df$lpep_dropoff_period,labels=paste("Period",c("night","morning","valley","afternoon")))
 
-
+### Variable distHaversine
 library(geosphere) 
 df$distHaversine <-distHaversine(df[,c("Pickup_longitude", "Pickup_latitude")],
               df[,c("Dropoff_longitude", "Dropoff_latitude")])/1000
@@ -579,6 +579,9 @@ l<-which((df$distHaversine<0)|(df$distHaversine=="Inf"))
 ierrs[l]<-ierrs[l]+1
 jerrs["distHaversine"]<-length(l)
 df[l,"distHaversine"]<-NA 
+
+
+
 
 ## Variable lpep_pickup_date, 
 
@@ -748,7 +751,8 @@ pie(jouts, labels=names(jouts),main = "Pie jouts")
 
 ```{r}
 summary(df)
-vars_dis <- c("VendorID", "RateCodeID","Payment_type", "Store_and_fwd_flag", "lpep_pickup_period", "lpep_dropoff_period", "Trip_type", "lpep_pickup_period", "lpep_dropoff_period")
+vars_dis <- c("VendorID", "RateCodeID","Payment_type", "Store_and_fwd_flag", "lpep_pickup_period", "lpep_dropoff_period", "Trip_type")
+
 vars_con <- c( "Passenger_count", "Trip_distance", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "Extra", "MTA_tax", "Improvement_surcharge", "Tip_amount", "Tolls_amount", "Total_amount")
 
 
