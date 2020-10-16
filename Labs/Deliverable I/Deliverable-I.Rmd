@@ -799,6 +799,9 @@ EDA_Univariant(df[,c("AnyTip", "AnyToll")])
 #Trip_type
 EDA_Univariant(df[,c("Trip_type")])
 
+vars_dis <- c("VendorID", "RateCodeID","Payment_type", "Store_and_fwd_flag", "lpep_pickup_period", "lpep_dropoff_period", "Trip_type", "lpep_pickup_period", "lpep_dropoff_period")
+vars_con <- c( "Passenger_count", "Trip_distance", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "Extra", "MTA_tax", "Improvement_surcharge", "Tip_amount", "Tolls_amount", "Total_amount")
+
 ```
 
 
@@ -806,13 +809,20 @@ EDA_Univariant(df[,c("Trip_type")])
 
 ```{r}
 
-# res.condes<-condes(df,which(names(df)=="Total_amount"))  # Takes a lot
-#res.condes<-condes(df[,c(vars_res,vars_con,vars_dis)],1)
-
-#res.condes$quanti  # Global association to numeric variables
-#res.condes$quali # Global association to factors
-#res.condes$category  # Partial association to significative levels in factors
-
+# Total_amount
+i <- names(df)
+i <- which(i=="Total_amount")
+res.condes<-condes(df,i)  
+res.condes$quanti 
+res.condes$quali 
+res.condes$category  
+#AnyTip
+i <- names(df)
+i <- which(i=="AnyTip")
+res.cat<-catdes(df,i)
+res.cat$quanti.var
+res.cat$quanti
+res.cat$category
 
 
 
