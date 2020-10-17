@@ -698,7 +698,7 @@ levels(df$f.distHaversine)<-paste("f.distHaversine-",levels(df$f.distHaversine),
 # Variable Fare_amount
 summary(df$Fare_amount)
 varaux<-factor(cut(df$Fare_amount,breaks=quantile(df$Fare_amount,seq(0,1,0.25),na.rm=TRUE),include.lowest = T ))
-summary(Fare_amount)
+summary(df$Fare_amount)
 df$f.Fare_amount <- varaux
 levels(df$f.Fare_amount)<-paste("f.Fare_amount-",levels(df$f.Fare_amount),sep="")
 summary(df$f.Fare_amount)
@@ -734,6 +734,7 @@ df$AnyTip<-factor(df$AnyTip,labels=paste("AnyTip",c("No","Yes")))
 EDA_Univariant(jmis,"Missings")
 pie(jmis, labels=names(jmis),main = "Pie jmis")
 jmis["Ehail_fee"] 
+summary(jmis)
 
 ### Variable errors
 l <-which(ierrs>1)
@@ -742,12 +743,14 @@ l <-which(ierrs>2)
 pie(ierrs[l], labels = 1:length(l))
 l <-which(ierrs>3)
 pie(ierrs[l], labels = 1:length(l))
-summary(jerrs)
+
+summary(ierrs)
 pie(jerrs, labels=names(jerrs),main = "Pie jerrs")
 
 ### Variable outliers
 l <-which(iouts>1)
 pie(iouts[l], labels = 1:length(l))
+summary(iouts)
 l <-which(iouts>2)
 pie(iouts[l], labels = 1:length(l))
 summary(jouts)
