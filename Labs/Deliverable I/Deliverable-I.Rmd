@@ -69,12 +69,12 @@ if(!is.null(dev.list())) dev.off()
 # Clean workspace
 rm(list=ls())
 
-#setwd("C:/Users/carle/Desktop/ADEI2")
-#filepath<-"C:/Users/carle/Desktop/ADEI2/"
+setwd("C:/Users/carle/Desktop/ADEI2")
+filepath<-"C:/Users/carle/Desktop/ADEI2/"
 # green_tripdata_2016-01
 
-setwd("~/Desktop/NYCABS")
-filepath<-"~/Desktop/NYCABS/"
+#setwd("~/Desktop/NYCABS")
+#filepath<-"~/Desktop/NYCABS/"
 # green_tripdata_2016-01
 
 df2<-read.table(paste0(filepath,"green_tripdata_2016-01.csv"),header=T, sep=",")
@@ -542,7 +542,7 @@ var_out<-calcQ(df$espeed)
 abline(h=var_out$souts,col="red")
 abline(h=var_out$souti,col="blue")
 
-l<-which((df$espeed<=3)|(df$espeed>240))
+l<-which((df$espeed<=3)|(df$espeed>140))
 iouts[l]<-iouts[l]+1
 jouts["espeed"]<-length(l)
 df[l,"espeed"]<-NA 
