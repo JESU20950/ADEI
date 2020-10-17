@@ -69,12 +69,12 @@ if(!is.null(dev.list())) dev.off()
 # Clean workspace
 rm(list=ls())
 
-setwd("C:/Users/carle/Desktop/ADEI2")
-filepath<-"C:/Users/carle/Desktop/ADEI2/"
+#setwd("C:/Users/carle/Desktop/ADEI2")
+#filepath<-"C:/Users/carle/Desktop/ADEI2/"
 # green_tripdata_2016-01
 
-#setwd("~/Desktop/NYCABS")
-#filepath<-"~/Desktop/NYCABS/"
+setwd("~/Desktop/NYCABS")
+filepath<-"~/Desktop/NYCABS/"
 # green_tripdata_2016-01
 
 df2<-read.table(paste0(filepath,"green_tripdata_2016-01.csv"),header=T, sep=",")
@@ -510,7 +510,8 @@ if (length(l)>0) {
   jerrs["lpep_dropoff_datetime"] <- length(l)
 }
 df[l,"traveltime"]<-NA 
-
+df[l,"lpep_pickup_datetime"]<-NA 
+df[l,"lpep_dropoff_datetime"]<-NA 
 
 #outliers
 boxplot(df$traveltime)
@@ -518,9 +519,13 @@ var_out<-calcQ(df$traveltime)
 abline(h=var_out$souts,col="red")
 abline(h=var_out$souti,col="blue")
 l<-which((df$traveltime<0)|(df$traveltime>800))
-iouts[l]<-iouts[l]+1
+iouts[l]<-iouts[l]+3
 jouts["traveltime"]<-length(l)
+jouts["lpep_pickup_datetime"] <- length(l)
+jouts["lpep_dropoff_datetime"] <- length(l)
 df[l,"traveltime"]<-NA 
+df[l,"lpep_pickup_datetime"]<-NA 
+df[l,"lpep_dropoff_datetime"]<-NA 
 
 
 # Effective speed (km/h)
@@ -531,9 +536,13 @@ summary(df$espeed)
 # errors
 summary(df$espeed)
 l<-which((df$espeed<=0)|(df$espeed=="Inf"))
-ierrs[l]<-ierrs[l]+1
+ierrs[l]<-ierrs[l]+3
 jerrs["espeed"]<-length(l)
+jerrs["lpep_pickup_datetime"] <- length(l)
+jerrs["lpep_dropoff_datetime"] <- length(l)
 df[l,"espeed"]<-NA 
+df[l,"lpep_pickup_datetime"]<-NA 
+df[l,"lpep_dropoff_datetime"]<-NA 
 
 # outliers
 summary(df$espeed)
@@ -543,9 +552,13 @@ abline(h=var_out$souts,col="red")
 abline(h=var_out$souti,col="blue")
 
 l<-which((df$espeed<=3)|(df$espeed>140))
-iouts[l]<-iouts[l]+1
-jouts["espeed"]<-length(l)
+iouts[l]<-iouts[l]+3
+jouts["traveltime"]<-length(l)
+jouts["lpep_pickup_datetime"] <- length(l)
+jouts["lpep_dropoff_datetime"] <- length(l)
 df[l,"espeed"]<-NA 
+df[l,"lpep_pickup_datetime"]<-NA 
+df[l,"lpep_dropoff_datetime"]<-NA 
 
 
 
@@ -592,7 +605,7 @@ df$lpep_pickup_date <- factor(df_datatime[,1])
 
 ```{r}
 
-vars_dis <- c( "lpep_pickup_date")
+vars_dis <- c("VendorID", "Payment_type", "Store_and_fwd_flag",  "RateCodeID", "f.Extra", "f.MTA_tax", "f.Improvement_surcharge", "lpep_pickup_period", "Trip_type", "lpep_pickup_date")
 
 summary(df[,vars_dis])
 res.immca<-imputeMCA(df[,vars_dis],ncp=10)
@@ -600,7 +613,7 @@ summary(res.immca$completeObs)
 
 # Check one by one
 df[ , vars_dis]<-res.immca$completeObs
-
+summary(df[,vars_dis])
 ```
 
 
