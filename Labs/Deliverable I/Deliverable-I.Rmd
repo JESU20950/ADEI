@@ -854,7 +854,7 @@ i <- which(names(df)=="Total_amount")
 res.condes<-condes(df,i)
 #Cuanto mas pequeño es el valor p mas intensa es la relación.
 res.condes$quanti #Global association variables numeric
-#Variables numericas correlacionadas con el target. Cuanto mas Fare_amount más Total_amount. Cuanto mas Dropoff_latitude 
+#Variables numericas correlacionadas con el target. 
 res.condes$quali #Global association variables categoricas
 #Variables categoricas correlacionadas con el target 
 res.condes$category
@@ -862,14 +862,12 @@ res.condes$category
 i <- which(names(df)=="AnyTip")
 res.cat<-catdes(df,i)
 res.cat$quanti.var #Global association variables numeric
-#La media entre el Tip_amount es diferente entre los AnyTip con valor True y AnyTip con valor False. Es decir, Tip_amount influye en el AnyTip. Muestra los p-value menores que 0.05.
 res.cat$quanti #Global association variables categoricas
-#Para la gente que ha dado propina(Any Tip == Yes) la media de Tip_amount esta por encima de la media global. v.test te dice si esta por encima o no. Mean in category es la media de la categoria si el valor AnyTip es yes(Condicional mean). Overall mean es la media sin condicionar (media global). La diferencia es significativa segun el sd, desviacion respecto a la media. p-value esta por encima y es significativo.
 res.cat$test.chi2
 #Las variables categoricas que caracterizan el factor
 res.cat$category #Profiling in categoricas
-#Cla/Mod. Media de Clausula respecto variable target. 
-#Global -> Media global. 
+#Cla/Mod. Media de clausula respecto variable target. Exemple:
+# El 61.28% de les persones que viatgen entre 0 i 15 minuts no han donat propina i el 76.19% de les persones que no han donat propina han realitzat un viatje d’entre 0 i 15 minuts.
 
 
 
