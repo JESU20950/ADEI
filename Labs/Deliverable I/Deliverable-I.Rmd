@@ -5,16 +5,16 @@ author:
 - name: Carles Capilla Cànovas
 date: \today
 output:
-  word_document:
-    toc: no
+  pdf_document:
+    number_sections: yes
+    toc: yes
     toc_depth: '4'
   md_document:
   html_document:
     toc: no
     toc_depth: '4'
-  pdf_document:
-    number_sections: yes
-    toc: yes
+  word_document:
+    toc: no
     toc_depth: '4'
 geometry: left=1.9cm,right=1.9cm,top=1.25cm,bottom=1.52cm
 fontsize: 18pt
@@ -649,6 +649,9 @@ df[l,"tlenkm"]<-0.001
 l<-which(df[,"distHaversine"]<0)
 df[l,"distHaversine"]<-0.001
 
+#Tip_amount
+l<-which(df[,"Tip_amount"]<0)
+df[l,"Tip_amount"]<-0.001
 
 summary(df)
 ```
@@ -835,6 +838,8 @@ EDA_Univariant(df[,c("AnyTip", "AnyToll", "f.Fare_amount")])
 #Trip_type
 EDA_Univariant(df[,c("Trip_type")])
 
+summary(df)
+
 
 
 ```
@@ -844,18 +849,28 @@ EDA_Univariant(df[,c("Trip_type")])
 
 ```{r}
 
-# Total_amount
+#Total_amount
 i <- which(names(df)=="Total_amount")
 res.condes<-condes(df,i)
-res.condes$quanti
-res.condes$quali
+#Cuanto mas pequeño es el valor p mas intensa es la relación.
+res.condes$quanti #Global association variables numeric
+#Variables numericas correlacionadas con el target. Cuanto mas Fare_amount más Total_amount. Cuanto mas Dropoff_latitude 
+res.condes$quali #Global association variables categoricas
+#Variables categoricas correlacionadas con el target 
 res.condes$category
 #AnyTip
 i <- which(names(df)=="AnyTip")
 res.cat<-catdes(df,i)
-res.cat$quanti.var
-res.cat$quanti
-res.cat$category
+res.cat$quanti.var #Global association variables numeric
+#La media entre el Tip_amount es diferente entre los AnyTip con valor True y AnyTip con valor False. Es decir, Tip_amount influye en el AnyTip. Muestra los p-value menores que 0.05.
+res.cat$quanti #Global association variables categoricas
+#Para la gente que ha dado propina(Any Tip == Yes) la media de Tip_amount esta por encima de la media global. v.test te dice si esta por encima o no. Mean in category es la media de la categoria si el valor AnyTip es yes(Condicional mean). Overall mean es la media sin condicionar (media global). La diferencia es significativa segun el sd, desviacion respecto a la media. p-value esta por encima y es significativo.
+res.cat$test.chi2
+#Las variables categoricas que caracterizan el factor
+res.cat$category #Profiling in categoricas
+#Cla/Mod. Media de Clausula respecto variable target. 
+#Global -> Media global. 
+
 
 
 ```
