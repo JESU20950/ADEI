@@ -1,5 +1,5 @@
 ---
-title: "Deliverable I/II. Load Data and Prepare Sample. MVA"
+title: "Deliverable II. PCA"
 author: "Lidia Montero"
 date: \today
 output:
@@ -15,7 +15,7 @@ output:
     toc_depth: '4'
 geometry: left=1.9cm,right=1.9cm,top=1.25cm,bottom=1.52cm
 fontsize: 18pt
-subtitle: 'Laboratori 3 - More Profiling and PCA'
+subtitle: 'Lab Session 4 - PCA Details for customization'
 classoption: a4paper
 editor_options: 
   chunk_output_type: console
@@ -68,7 +68,7 @@ Data Dictionary - SHL Trip Records -This data dictionary describes SHL trip data
 # Load Required Packages: to be increased over the course
 options(contrasts=c("contr.treatment","contr.treatment"))
 
-requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr")
+requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","ggpubr")
 missingPackages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
 
 if(length(missingPackages)) install.packages(missingPackages)
@@ -97,37 +97,6 @@ summary(df)
 ```
 
 
-## Profiling
-
-```{r}
-##############################################################################
-#                                    Profiling 
-#                           Package FactoMineR will be used
-##############################################################################
-library(FactoMineR)
-summary(df$Total_amount)
-
-# The "variable to describe cannot have NA ###################################
-
-#res.condes<-condes(df,which(names(df)=="Total_amount"))  # Takes a lot
-
-names(df)
-vars_res<-names(df)[c(15,23)]
-vars_con<-names(df)[c(7:14,17:21)]
-vars_dis<-names(df)[c(1:2,16,22,24:36)]
-
-res.condes<-condes(df[,c(vars_res,vars_con,vars_dis)],1)
-
-res.condes$quanti  # Global association to numeric variables
-res.condes$quali # Global association to factors
-res.condes$category  # Partial association to significative levels in factors
-
-res.catdes<-catdes(df[,c(vars_res,vars_con,vars_dis)],2)
-res.catdes$test.chi2
-res.catdes$quanti.var
-res.catdes$category
-```
-
 # Principal Component Analysis
 
 ```{r}
@@ -142,10 +111,11 @@ res.pca<-PCA(df[,1:23],quali.sup=c(1,2,16,22:23),quanti.sup= c(3:6,15))
 
 # Multivariant outliers should be included as supplementary observations
 
-plot.PCA(res.pca,choix=c("var"),invisible=c("quanti.sup"))
-plot.PCA(res.pca,choix=c("var"),invisible=c("var"))
-plot.PCA(res.pca,choix=c("var"),invisible=c("quanti.sup","var"))
-plot.PCA(res.pca,choix=c("ind"),invisible=c("ind"))
+plot(res.pca,choix=c("var"),invisible=c("quanti.sup"))
+plot.PCA(res.pca,choix=c("var"),invisible=c("var"),cex=0.8)
+plot.PCA(res.pca,choix=c("var"),invisible=c("quanti.sup"),cex=0.8)
+plot.PCA(res.pca,choix=c("var"),invisible=c("quanti.sup"),select="contrib 5",cex=0.8)
+plot.PCA(res.pca,choix=c("ind"),invisible=c("ind"),cex=0.5)
 ?plot.PCA
 
 ### I. Eigenvalues and dominant axes. How many axes we have to interpret? ###
@@ -163,14 +133,19 @@ sum(res.pca$eig[,1])
 ### Are they any individuals "too contributive"       ##############
 names(res.pca$ind)
 round(cbind(res.pca$ind$coord[,1:3],res.pca$ind$cos2[,1:3],res.pca$ind$contrib[,1:3]),2)
+plot.PCA(res.pca,choix=c("ind"),invisible=c("ind"),cex=0.5)
+plot.PCA(res.pca,choix=c("ind"),select="contrib 40",invisible=c("quali"),cex=0.75)
 
 # To better understand the axes through the extreme individuals
 res.pca$ind$coord
 rang<-order(res.pca$ind$coord[,1])
 length(rang)
 row.names(df)[rang[4874:4884]]
+
+rang[1:10]
 row.names(df)[rang[1:10]]
 
+rang[1]
 res.pca$ind$coord[rang[1],1]
 res.pca$ind$coord["1066427",1]  # Access using row names: invariant
 res.pca$ind$coord[3590,1] # Access using row number in current data.frame
@@ -190,21 +165,29 @@ round(cbind(res.pca$var$cos2[,1:4],res.pca$var$contrib[,1:4]),2)
 # dimdes easies this description from the variables
 res.des<-dimdesc(res.pca)
 ###
-
+str(res.des)
 res.des$Dim.1$quanti
 
 ### we can need more than 2 axes to have a good representation of the clouds
 ?plot.PCA
 plot.PCA(res.pca,choix=c("ind"),cex=0.8)
-plot.PCA(res.pca,choix=c("ind"),invisible=c("quali"),axes=c(3,4))
+plot.PCA(res.pca,choix=c("ind"),invisible=c("quali"),axes=c(1,2))
 plot.PCA(res.pca,choix=c("var"),axes=c(3,4))
 
 ### IV. Perform a PCA taking into account also supplementary variables
 ### the supplementary variables can be quantitative and/or categorical  
 res.pca <- PCA(df[,1:23],quali.sup=c(1,2,16,22:23),quanti.sup= c(3:6,15),ncp=4)
 
-plot(res.pca, choix="ind",invisible="ind")
-lines(res.pca$quali.sup$coord[2:3,1],res.pca$quali.sup$coord[2:3,2],lwd=2,col="black")
+plot(res.pca, choix="ind",invisible="ind",cex=0.75)
+lines(res.pca$quali.sup$coord[3:4,1],res.pca$quali.sup$coord[3:4,2],lwd=2,col="black")
+
+# Manually producing the plot
+
+plot(res.pca$ind$coord[,1],res.pca$ind$coord[,2],pch=19,col="grey30")
+points(res.pca$quali.sup$coord[,1],res.pca$quali.sup$coord[,2],pch=15,col="magenta")
+lines(res.pca$quali.sup$coord[3:4,1],res.pca$quali.sup$coord[3:4,2],lwd=2,lty=2,col="black")
+text(res.pca$quali.sup$coord[,1],res.pca$quali.sup$coord[,2],labels=names(res.pca$quali.sup$coord[,1]),col="magenta",cex=0.8)
+
 res.pca$quali.sup$coord
 
 
@@ -221,3 +204,23 @@ plot(res.pca, choix="var",invisible="quanti.sup",axes=3:4)
 
 ```
 
+# Factoextra
+
+```{r}
+library(factoextra)
+library(ggpubr)
+fviz_eig(res.pca, addlabels = TRUE, ylim = c(0, 50))
+fviz_pca_var(res.pca, col.var = "steelblue")
+
+library("corrplot")
+corrplot(res.pca$var$cos2, is.corr=FALSE)
+
+fviz_cos2(res.pca, choice = "var", axes = 1:2)
+
+# Color by cos2 values: quality on the factor map
+fviz_pca_var(res.pca, col.var = "cos2", gradient.cols = c("white", "blue", "red"), repel = TRUE, legend.title="Nice plot") # Avoid text overlapping
+
+# Contributions of variables to PC1
+fviz_contrib(res.pca, choice = "var", axes = 1:2, top = 10)
+
+```

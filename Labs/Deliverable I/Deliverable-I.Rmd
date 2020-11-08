@@ -841,6 +841,7 @@ EDA_Univariant(df[,c("Trip_type")])
 summary(df)
 
 
+write.csv(df, "Deliverable1.csv", row.names = FALSE)
 
 ```
 
