@@ -1,0 +1,211 @@
+---
+title: "QUIZ1 ADEI_20-21Q1: Template for solutions to questions"
+author: "Your Name"
+date: "November 10th, 2020"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+# List of Questions
+
+The data set for this exercise contains 396 observations for the mean daily values of the variables included in the table referred to a wastewater treatment plant. The plant has measures on the quality of the wastewater at the entrance of the plant, they are the variables xxx.e, from here they go to a first decantation process (Primary Treatment) where it is intended that they settle the solids in suspensions. Then it goes into the Biological Reactor. This is the most critical part. Here is a biological mud that literally "lives by eating organic matter." It is activated by temperature and aeration. This process is carried out by many species of microorganisms. These microorganisms work at different temperatures. If they are not balanced with the composition of the water, they eat each other. The control variables are those that graduate aeration, temperature, recirculation and purge of the bioreactor. This is the most difficult part: if things go well, dirty water and biological mud enter the bioreactor and end up with clean water and colonies of microorganisms that have consumed the organic matter. Then the water goes through a second decanting process where the microorganisms settle because if the water is not aerated they fall to the ground. And then clean can be poured into the river. The purified water, at the end of the process, before being poured into the river must have neither DBO, nor DQO, nor SS nor SSV, absolute zeros are impossible and therefore the current legislation has permissible limits that are not dangerous for the life in rivers. Available variables:
+
+  -   date	id from 1 to number of observations
+  -   dateformated	dd-mm-yy
+  -   datenorm	dd/mm/yyyy
+  -   q.e	Input Flow
+  -   qb.b	Flow after biological reactor
+  -   qr.g	Recirculation Flow 
+  -   qp.g	Purge Flow 
+  -   qa.g	Air inflow 
+  -   fe.e	Iron pretreatment
+  -   ph.e	Hydrogen potential 
+  -   ss.e	Input Solid in Suspension 
+  -   ssv.e	Input Suspended Volatile Solids 
+  -   dqo.e	Input Fraction of degradable organic matter 
+  -   dbo.e	Input BIOdegradable organic matter fraction
+  -   nkt.e	Input Hydrogen potential 
+  -   nh4.e	Input Ammonium concentration
+  -   p.e	Input Phosphor concentration
+  -   ph.d	Decantation Hydrogen potential at the settler
+  -   ss.d	Decantation Solid in Suspension at the settler
+  -   ssv.d	Decantation Suspended Volatile Solids  at the settler
+  -   dqo.d	Decantation Fraction of degradable organic matter at the settler
+  -   dbo.d	Decantation BIOdegradable organic matter fraction at the settler
+  -   nkt.d	Decantation Hydrogen potential at the settler
+  -   nh4.d	Decantation Ammonium concentration at the settler
+  -   p.d	Decantation Phosphor concentration at the settler
+  -   ph.s	Output Hydrogen potential
+  -   ss.s	Output Solid in Suspension 
+  -   ssv.s	Output Suspended Volatile Solids 
+  -   dqo.s	Output Fraction of degradable organic matter 
+  -   dbo.s	Output BIOdegradable organic matter fraction
+  -   nk.s	Unknown 
+  -   nh4.s	Output Ammonium concentration 
+  -   p.s	Output Phosphor concentration 
+  -   v30.b	Biological Volumetric Analysis 
+  -   mlss.b	Biological Mixed Liquor Suspended Solids
+  -   mlvss.b	Biological Volatile solids in suspension liquor mixture 
+  -   im.b	Unknown
+  -   cm1.b	Unknown
+  -   cm2.b	Unknown
+  -   mcrt.b	Biological Cell Age
+  -   trh.c	Unknown (non important)
+  -   dbo.dqoe	Input Quocient DBO.E into DQO.E
+  -   dbo.dqod	Quocient DBO.D into DQO.D at the settler
+  -   dbo.dqos	Output Quocient DBO.S into DQO.S
+  -   weekday	Day of the week
+  -   season	Year season
+
+The data technically correspond to daily measurements and there is a temporal correlation that cannot be dealt with in this subject. You only have to work in this exercise with the data in randomized order. The response variables are considered the fraction of biodegradable organic matter DBO.S, degradable organic matter DQO.S or solids in suspension, either volatile (SSV.S) or not (SS.S) in the OUTPUT of the plant. The response variable DQO.S is initially considered.
+
+# Load Required Packages: to be increased over the course
+
+```{r}
+# Load Required Packages: to be increased over the course
+options(contrasts=c("contr.treatment","contr.treatment"))
+
+requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","ggpubr")
+missingPackages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
+
+if(length(missingPackages)) install.packages(missingPackages)
+lapply(requiredPackages, require, character.only = TRUE)
+
+```
+**Firstly, load dataset and check available variables.**
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+load("C:/Users/prestec/Desktop/WasteWater.RData")
+```
+
+**1. Produce a randomized dataset to destroy serial correlation.**
+
+```{r}
+load("C:/Users/prestec/Desktop/WasteWater.RData")
+set.seed(12345)
+sam<-as.vector(sort(sample(1:nrow(df),150)))
+var <- c("q.e", "fe.e", "ph.e","ss.e", "ssv.e", "dqo.e", "dbo.e", "ph.d", "ss.d", "ssv.d", "dqo.d", "dbo.d", "qb.b", "v30.b", "qr.g","qp.g", "qa.g", "mlss.b", "mlvss.b", "mlvss.b", "mcrt.b", "ph.s", "ss.s", "ssv.s", "dqo.s", "dbo.s")
+df<-df[sam,var]
+summary(df)
+
+
+```
+
+**2.	Missing data have been treated, but some NA coded as 0 values still remain in fe.e and qp.g and have to be treated by applying imputation tools explained in class.**
+
+```{r}
+l <- which(df$fe.e == 0)
+df[l,"fe.e"] <- NA
+l <- which(df$qp.g == 0)
+df$qp.g[l] <- NA
+
+```
+
+**3.	Univariant outliers for output variable DQO.S are also present and have to be treated. Do it.**
+
+```{r}
+summary(df$dqo.s)
+boxplot(df$dqo.s)
+l <- which(df$dqo.s >110)
+df[l,"dqo.s"] <- NA
+res.impca<-imputePCA(df,ncp=6)
+df <- as.data.frame(res.impca$completeObs)
+```
+
+**4.	Are there multivariant outliers? Find them. Try to explain their singularity. Multivariant outliers are not going to be treated in this exercise: keep them as they are.**
+
+```{r}
+var_cont <- c("dqo.s", "ph.e", "ph.d", "ss.s")
+mout<-Moutlier(df[,var_cont],quantile = 0.995, plot = TRUE)
+Boxplot(mout$rd)
+l<-which(mout$rd>4.5)
+df$multiouts <- FALSE
+df[l,"multiouts"] <- TRUE
+df[,"multiouts"] <- as.factor(df[,"multiouts"])
+```
+
+**5.	Indicate by using exploratory data analysis tools which are apparently the most associated variables with the response variable (use only the indicated variables). Use also FactoMineR profiling tools.**
+
+```{r}
+
+```
+
+**6.	Define polytomic factors f.dbo.s, f.dqo.s, f.sst.s (from SSV.S plus SS.S) for the covariates according to the legal limit (DBO 25 mg/l O2, DQO 125 mg/l O2 and total suspended solids 35 mg/l). Profile f.dqo.s factor.**
+
+```{r}
+df[,"sst.s"] <- df$ssv.s + df$ss.s
+df$sst.s <- FALSE
+l <- which(df$sst.s <35)
+df$sst.s[-l] <- TRUE
+# False significa no supera el limite
+df$f.dbo.s <- FALSE
+l <-which(df$dbo.s < 25)
+df$f.dbo.s[-l] <- TRUE
+df$f.dgo.s <- FALSE
+df$f.dgo.s <- as.factor(df$f.dgo.s)
+l <- which(df$dgo.s <125)
+df$f.dgo.s[-l] <- TRUE
+i <- which(names(df)=="f.dgo.s")
+#res.cat<-catdes(df,i)
+#res.cat$quanti.var #Global association variables numeric
+#res.cat$quanti #Global association variables categoricas
+#res.cat$test.chi2
+#Las variables categoricas que caracterizan el factor
+#res.cat$category #Profiling in categoricas
+
+```
+
+**7.	A Normalized Principal Component Analysis is addressed using as supplementary variables available factor and xxxx.s output variables. How many axes do you have to retain according to Kaiser criteria? And according to Elbow’s rule? What’s the inertia explained by retained Kaiser-based principal components?**
+
+```{r}
+
+res.pca<-PCA(df[,1:26],quanti.sup=c(23:26), ncp=4, ind.sup = which(df$multiouts==TRUE)) 
+summary(res.pca, TOP =TRUE)
+#Segun el criterio de Kaiser debemos coger los valores mayores que 1 por lo tanto deberiamos coger hasta la 7 dimension.
+#Segun el criterio de Elbow debemos de coger hasta el codo 
+```
+
+**7.	Try to explain the meaning of the axes in the first factorial plane. Which are the 3 variables with the greatest correlation with the first factorial plane?**
+
+```{r}
+fviz_cos2(res.pca, choice = "var", axes = 1:2)
+fviz_contrib(res.pca, choice = "var", axes = 1:2, top = 10)
+#names(df)[c(4:30,32:36,40,45:46)] # Vars to be considered
+#Como podemos ver en el primer plano factorial las variables aquellos individios cuyos valores de inputacion son elevados se encuentran a la derecha. Ademas aquellos valores que tienen valor elevado en xxx.b se encuentran a la izquierda. Los individios con xxx.b elevados se encuentran arriba del todo y los indiviudos con ph.d, ph.e, ph.s, qp.g elevados se encuentran abajo del todo. Respecto a la contribucion de las variables las variables mlssb, mcrt.b ssv.e son son principal mente las que mas  contribuyen en el primer plano factorial. Las variables mlss.b, mcrt.b, ssv.e , mlvssb.b son las variables mejor representadas en el pirmer plano factorial.
+
+```
+
+**8.	A Hierarchical Clustering is addressed. How many clusters are needed to represent 60% of the total inertia.**
+
+
+```{r}
+res.hcpc<-HCPC(res.pca,nb.clust = -1,order=TRUE)
+(res.hcpc$call$t$within[1]-res.hcpc$call$t$within[1:20])/res.hcpc$call$t$within[1]
+# como podemos ver para ctener una inecia del 60 porciento necesitamos coger 5 clusters 
+```
+
+
+**9.	A nondefault criteria for selecting the number of clusters to 3 has to be set. Explain the characteristics of cluster number 3.**
+
+
+```{r}
+
+```
+
+**10.	Use a partition method to group available data into the selected number of clusters found in Question 7. Determine the quality of the partition and plot the resulting partition in the first factorial plane.**
+
+```{r}
+
+```
+
+**Do not forget to Knit to .pdf before posting your answers in ATENEA. **
