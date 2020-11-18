@@ -1,0 +1,163 @@
+---
+title: "CA"
+author: "Lidia Montero"
+date: "September 2016"
+output: 
+  html_document: 
+    toc: true
+    toc_depth: 3
+    number_sections: true
+editor_options: 
+  chunk_output_type: console
+---
+
+# Introduction
+
+## Load data 
+
+
+```{r}
+
+library(FactoMineR)
+library(car)
+library(missMDA)
+
+rm(list = ls()) # Remove all objects
+work <- read.table("http://factominer.free.fr/book/work_women.csv", header=TRUE,row.names=1,sep=";")
+summary(work)
+dim(work)
+res.test.chi2 <- chisq.test(work[,1:3])
+res.test.chi2
+round(res.test.chi2$expected,1)
+round(res.test.chi2$residuals^2, 2)
+round(100*res.test.chi2$residuals^2/res.test.chi2$stat,2)
+
+don<-work
+dd <- rbind(don,apply(don[,1:3],2,sum))
+rownames(dd)[4] <- "Mean profile"
+round(prop.table(as.matrix(dd),margin=1),3)
+
+dd <- cbind(don,apply(work[,1:3],1,sum))
+colnames(dd)[4] <- "Mean profile"
+round(prop.table(as.matrix(dd),margin=2),3)
+
+#graph depicting the superimposed representation
+res.ca <- CA(work[,1:3])
+plot(res.ca,invisible="col")
+plot(res.ca,invisible="row")
+
+# Plot with the true barycenters
+
+plot(res.ca,invisible="col")
+coord.col = sweep(res.ca$col$coord,2,sqrt(res.ca$eig[,1]),FUN="*")
+points(coord.col,pch=17,col="red")
+text(coord.col,rownames(coord.col),col="red")
+
+plot(res.ca,invisible="row")
+coord.row = sweep(res.ca$row$coord,2,sqrt(res.ca$eig[,1]),FUN="*")
+points(coord.row,pch=20,col="blue")
+text(coord.row,rownames(coord.row),col="blue")
+
+# Table and graph of eigenvalues
+res.ca$eig
+barplot(res.ca$eig[,1],main="Eigenvalues",
+names.arg=1:nrow(res.ca$eig))
+
+#The table of contributions, and that of representation qualities of the rows and columns
+
+cbind(res.ca$row$coord,res.ca$row$contrib,res.ca$row$cos2)
+cbind(res.ca$col$coord,res.ca$col$contrib,res.ca$col$cos2)
+
+res.ca$row$inertia
+res.ca$col$inertia
+res.ca$row$inertia/res.ca$call$marge.row
+res.ca$col$inertia/res.ca$call$marge.col
+
+res.ca2 <- CA(work,col.sup=4:ncol(work))
+```
+
+The Olympic Games Dataset
+
+```{r}
+library(FactoMineR)
+library(car)
+library(missMDA)
+data(JO)
+dim(JO)
+summary(JO)
+# JO event and medals by country: can each country be considered to have the same athletic profile? Can each event be considered to have the same geographical profile ?
+JO
+# Margin profiles have to be calculated otherwise countries with the most medals have a greater influence on the analysis
+res.ca <- CA(JO)
+res.ca
+
+# Independence: X2 test, careful interpretation since a lot of zeros are present (consider 80% of the theoretical sample size to be greater than 5, and the others to be greater than 1). Anyway, pvalue is so small, independence can be rejected
+chisq.test(JO)
+# How many components to choose?
+res.ca$eig
+sum(res.ca$eig[,1])
+mean(res.ca$eig[,1])
+barplot(res.ca$eig[,1],main="Eigenvalues",names.arg=paste("dim",1:nrow(res.ca$eig)))
+# The first 2 dimensions express 24.4% of the total inertia (more dimensions have to be considered)
+plot(res.ca)
+plot(res.ca,axes=3:4)
+plot(res.ca,invisible="row",axes=1:2)
+plot(res.ca,invisible="col")
+# Interpretation of Results: projection of rows. Long distance races are separated from the other events on first dimension
+# Countries with negative first component won many medals in endurance events (African countries). The most extreme elements are not necessarily those which contributed the most to the construction of the dimensions. Ethiopia, Kenya, and Morocco account for 65% of the construction of the first dimension
+res.ca$col$contrib[rev(order(res.ca$col$contrib[,1])),1]
+
+# The second dimension separates sprinting events from the discus, the hammer, and walking (20 km and 50 km)
+
+res.ca$col$contrib[rev(order(res.ca$col$contrib[,2])),2]
+
+#Dimensions 3 and 4 also separate the discus and the hammer from the walking events (20 km and 50 km)
+plot(res.ca,axes=3:4)
+
+res.ca$row$contrib[rev(order(res.ca$row$contrib[,1])),1]
+
+#row and column margins 
+res.ca$call$marge.row
+res.ca$call$marge.row*sum(JO)
+res.ca$call$marge.col
+res.ca$call$marge.col[rev(order(res.ca$call$marge.col))]*sum(JO)
+sum(JO)
+```
+## Children
+```{r}
+data(children)
+
+res.ca <- CA (children, col.sup = 6:8)
+res.ca <- CA (children, row.sup = 15:18, col.sup = 6:8)
+summary(res.ca)
+## Ellipses for all the active elements
+ellipseCA(res.ca)
+## Ellipses around some columns only
+ellipseCA(res.ca,ellipse="col",col.col.ell=c(rep("blue",2),rep("transparent",3)),
+     invisible=c("row.sup","col.sup"))
+```
+
+# The Causes of Mortality Dataset
+```{r}
+library(FactoMineR)
+death <- read.table("http://factominer.free.fr/book/death.csv",
+header=TRUE,sep=";",row.names=1)
+dim(death)
+colnames(death) <- c("0-1","1-4","5-14","15-24","25-34","35-44",
+"45-54","55-64","65-74","75-84","85-94","95+")
+res.ca=CA(death,row.sup=66:nrow(death), graph=FALSE)
+round(res.ca$call$marge.col,3)
+round(res.ca$call$marge.row[order(res.ca$call$marge.row)],3)
+par(las=1)
+barplot(res.ca$call$marge.col,horiz=TRUE)
+barplot(res.ca$call$marge.row[order(res.ca$call$marge.row)],horiz=TRUE)
+par(las=0)
+
+100*res.ca$col$inertia/sum(res.ca$col$inertia)
+bb<-round(cbind.data.frame(res.ca$call$marge.col,
+sqrt(res.ca$col$inertia/res.ca$call$marge.col),
+res.ca$col$inertia,res.ca$col$inertia/sum(res.ca$col$inertia)),4)
+colnames(bb)<-c("Weight","Distance","Inertia","% of inertia")
+bb
+```
+

@@ -1,0 +1,229 @@
+---
+title: "QUIZ1 ADEI_1920Q2: Solutions to questions"
+author: "L. Montero"
+date: "March 30th, 2020"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+# List of Questions
+
+25 personality self-report items taken from the International Personality Item Pool (ipip.ori.org) were included as part of the Synthetic Aperture Personality Assessment (SAPA) web based personality assessment project (SAPA https://sapa-project.org). The data from 2800 subjects are included here. Three additional demographic variables (sex, education, and age) are also included. The first 25 items are organized by five putative factors: Agreeableness, Conscientiousness, Extraversion, Neuroticism, and Openness. The item data were collected using a 6 point response scale: 1 Very Inaccurate 2 Moderately Inaccurate 3 Slightly Inaccurate 4 Slightly Accurate 5 Moderately Accurate 6 Very Accurate. The items given were sampled from the International Personality Item Pool of Lewis Goldberg using the sampling technique of SAPA. This is a sample data set taken from the much larger SAPA data bank. Available variables:
+
+  - A1 I Am indifferent to the feelings of others. (q_146)
+  - A2 Inquire about others' well-being. (q_1162)
+  - A3	Know how to comfort others. (q_1206)
+  - A4	Love children. (q_1364)
+  - A5	Make people feel at ease. (q_1419)
+  - C1	Am exacting in my work. (q_124)
+  - C2	Continue until everything is perfect. (q_530)
+  - C3	Do things according to a plan. (q_619)
+  - C4	Do things in a half-way manner. (q_626)
+  - C5	Waste my time. (q_1949)
+  - E1	Don't talk a lot. (q_712)
+  - E2	Find it difficult to approach others. (q_901)
+  - E3	Know how to captivate people. (q_1205)
+  - E4	Make friends easily. (q_1410)
+  - E5	Take charge. (q_1768)
+  - N1	Get angry easily. (q_952)
+  - N2	Get irritated easily. (q_974)
+  - N3	Have frequent mood swings. (q_1099
+  - N4	Often feel blue. (q_1479)
+  - N5	Panic easily. (q_1505)
+  - O1	Am full of ideas. (q_128)
+  - O2	Avoid difficult reading material.(q_316)
+  - O3	Carry the conversation to a higher level. (q_492)
+  - O4	Spend time reflecting on things. (q_1738)
+  - O5	Will not probe deeply into a subject. (q_1964)
+  - gender	gender Males = 1, Females =2
+  - education	1 = HS, 2 = finished HS, 3 = some college, 4 = college graduate 5 = graduate degree
+  - age	age in years
+
+
+**Source:** The items are from the ipip (Goldberg, 1999). The data are from the SAPA project (Revelle, Wilt and Rosenthal, 2010) , collected Spring, 2010 ( https://sapa-project.org).
+
+**References:** 
+  1.	Goldberg, L.R. (1999) A broad-bandwidth, public domain, personality inventory measuring the lower-level facets of several five-factor models. In Mervielde, I. and Deary, I. and De Fruyt, F. and Ostendorf, F. (eds) Personality psychology in Europe. 7. Tilburg University Press. Tilburg, The Netherlands.
+  2.	Revelle, W., Wilt, J., and Rosenthal, A. (2010) Individual Differences in Cognition: New Methods for examining the Personality-Cognition Link In Gruszka, A. and Matthews, G. and Szymura, B. (Eds.) Handbook of Individual Differences in Cognition: Attention, Memory and Executive Control, Springer.
+  3.	Revelle, W, Condon, D.M., Wilt, J., French, J.A., Brown, A., and Elleman, L.G. (2016) Web and phone based data collection using planned missing designs. In Fielding, N.G., Lee, R.M. and Blank, G. (Eds). SAGE Handbook of Online Research Methods (2nd Ed), Sage Publications.
+ 
+
+**Firstly, load dataset and check available variables.**
+
+```{r}
+rm(list=ls())
+setwd("C:/Users/lidia/Dropbox/DOCENCIA/FIB-ADEI/EXAMENS/1920Q2")
+load("C:/Users/lidia/Dropbox/DOCENCIA/FIB-ADEI/EXAMENS/1920Q2/bfi_Raw.RData")
+summary(df)
+```
+
+**1. Define a binary factor for gender f.gender and a polytomic factor for education f.educ. Justify with R commands for the procedure and your answer. Calculate thresholds to identify severe outliers for the age variable (age).**
+
+```{r}
+df$f.gender<-factor(df$gender,labels=c("sex.male","sex.female"))
+summary(df$f.gender)
+ll<-which(is.na(df$education))
+df$education[ll]<-6
+df$f.educ<-factor(df$education,labels=c("HS", "finished HS", "some college", "college graduate", "graduate degree","Unknown"))
+levels(df$educ)
+summary(df$educ)
+
+sumres<-summary(df$age)
+iqr<-as.numeric(sumres[5]-sumres[2]);iqr
+mildlow<-as.numeric(sumres[2]-1.5*iqr)
+mildup<-as.numeric(sumres[5]+1.5*iqr)
+sevlow<-as.numeric(sumres[2]-3*iqr)
+sevup<-as.numeric(sumres[5]+3*iqr)
+mildlow;mildup
+sevlow;sevup
+
+ll<-which(df$age>sevup);length(ll);ll
+```
+
+*Education can be seen to have 223 missing values. Imputation is not a reasonable solution and an specific level unknown has to be defined. Gender and education are defined as factors. Age is a numeric variable without missing data. Computation of severe outliers thresholds determines that those observations greater than 80 are severe outliers: only 1 person satisfy this condition (obs. 1158). Lower severe threshold does not make sense (since is -25). Follow R commands to figure out the calculus of these thresholds, based on 1.5/3 times Inter Quartilar Range from Q1/Q3. Or check theory slide notes.*
+
+**2.	Conduct a suitable data imputation procedure to remove missing data included in dataset for numeric variables. Check imputation consistency for numeric variables.**
+
+
+```{r}
+library(missMDA)
+names(df)
+#summary(df[,c(1:25)])
+res.impu<-imputePCA(df[,c(1:25,28)])
+dfimpu<-as.data.frame(res.impu$completeObs)
+
+#library(psych)
+#describe(df[,1:25])
+library(car)
+Boxplot(df[,1:25])
+Boxplot(dfimpu[,1:25])
+lapply(df[,1:25],quantile, probs=seq(0,1,0.1),na.rm=T)
+lapply(dfimpu[,1:25],quantile, probs=seq(0,1,0.1),na.rm=T)
+
+df[,1:25]<-res.impu$completeObs[,1:25]
+#summary(df)
+
+```
+
+*All 25 first variables have missing values, between 9 and 36, except variable O2. Method imputePCA() from missMDA package has to be used for imputation of numeric variables. Check for reasonable imputation values has to be done using either graphics or quantiles. No problems seems to be present.*
+
+**3.	Conduct a suitable data imputation procedure for factors. Summarize imputation results for f.education factor.**
+
+```{r}
+summary(df$f.educ)
+```
+
+*Imputation for factors would have to use f.educ and f.gender data, so it is not likely that they contain enough information for a suitable imputation. If a set of factors had been included in dataset, then imputeMCA() in missMDA package would have to be used for imputation purposes. Actually, missing values of variable education have to be selected to define a new level in factor f.educ labelled as "Unknown".There are 223 observations with unknown education level.*
+
+
+**4.	Can the average of age can be argued to be the same for all education levels (f.educ) and gender (f.gender)? Which are the groups that show significant greater values than the others? Use graphic, numeric and inferential tools.**
+
+```{r}
+hist(df$age,15,freq=F,col="orange")
+lines(density(df$age),col="red",lwd=2)
+shapiro.test(df$age)
+
+Boxplot(df$age~df$f.gender,main="Age by Gender")
+Boxplot(df$age~df$f.educ,main="Age by Education Level")
+
+tapply(df$age,df$f.gender,summary)
+tapply(df$age,df$f.educ,summary)
+
+kruskal.test(df$age,df$f.gender)
+kruskal.test(df$age,df$f.educ)
+pairwise.wilcox.test(df$age,df$f.educ,alternative="greater")
+
+library(FactoMineR)
+res.condes<-condes(df[,c(1:25,28:30)],num.var=26,proba=0.01)
+res.condes$quanti
+res.condes$quali
+res.condes$category
+```
+
+*Numeric, graphic and inferential tools have to use to answer this question. First of all a rough assessment of age normality is performed: clearly shape is not symmetric and Shapiro-Wilk test rejects the null hypothesis of normality. Without normality, non-parametric methods have to be used. Summary statistics for groups of age defined according to f.gender/f.educ are not conclusive for f.gender, but differences appear for f.educ levels. Graphics: boxplot of age for f.gender is difficult to assess, but boxplot for each f.educ level show a clear different profile for age depending on the levels. Inferential tools: Null hypothesis for equal means age according to f.gender/f.educ are both rejected (pvalue=5e-03 for gender and pvalue=0 for education factor). Pairwise mean tests  for f.educ can be computed  and null hypothesis can be rejected (some of them). Null hypothesis can be defined as mean in group i greater (less) than mean in j.* 
+
+*A condes() method can be used for a fast answer: $quali  shows global significance of f.educ and f.gender. It also shows graduate degree, college graduate, finished HS and female mean ages are over the mean and males, HS, some college and unknown are significantly under the global mean of age.*
+
+
+**5.	Let us assume that education (f.educ) is the target variable. Use a suitable feature selection and profiling tool to discuss global association between target and numerical variables/factors in dataset.**
+
+
+```{r}
+names(df)
+res.catdes<-catdes(df[,c(1:25,28:30)],num.var=28,proba=0.01)
+res.catdes$test.chi2
+res.catdes$quanti.var
+
+```
+
+
+*Globally associated to f.educ is f.gender factor. f.educ is globally associated to numeric variables age and 24 items more, being the most significance A4, A1, C4, C5 and O3 (all of them showing pvalues less than 1e-09).* 
+
+**6.	Profile HS education group according to available data in your dataset. **
+
+```{r}
+library(FactoMineR)
+res.catdes$category
+res.catdes$quanti
+```
+
+*Men are overrepresented in HS level (41.5% of HS group vs 32.82% globally, more than 10% of men included in the sample belong to HS group), while they are underrepresented in 'some college' groups. Specifically, numeric variables whose means are significantly different to overall mean for each f.educ level are:*
+
+  *-For 'HS' level C4 and A1 are over the global mean, while age E5 and C3 are under the global mean. This is the direct answer to the question.*
+  *-For 'finished HS' level age and A1 are over the global mean.*
+  *-For 'some college' level A4, E4 and O2 are over the global mean, while age, C5 and C4 are under the global mean.*
+  *-For 'college graduate' level age, O4 and C2 are over the global mean, while A1, A4 and O2 are under the global mean.*
+
+**7.	A Normalized Principal Component Analysis is addressed using as supplementary variables gender, education and age. How many axes do you have to retain according to Kaiser criteria? What’s the inertia explained by retained Kaiser-based principal components?.**
+
+```{r}
+library(FactoMineR)
+names(df)
+res.pca<-PCA(df[,c(1:25,28:30)],quali.sup=27:28,quanti.sup=26)
+summary(res.pca,nbind=0,nbelements = 25)
+```
+
+*Strictly following Kaiser criteria, we have to retain as many axes as eigenvalues greater than 1.0 (mean eigenvalue value). 6 axes satisfy the condition and explain 57.25% of the total inertia.*
+
+
+**8.	Try to explain the meaning of the axes in the first factorial plane. Which 3 variables have the greatest correlation with each factor in the first factorial plane?.**
+
+```{r}
+summary(res.pca,nb.dec=2,nbind=0,nbelements = 25,ncp=2)
+ddd<-dimdesc(res.pca,axes=1:2)
+ddd$Dim.1
+ddd$Dim.2
+```
+
+*It is difficult to summarize, but positive correlation to axis 1 are E4, A5 and negative correlated to E2 (Find it difficult to approach others. (q_901)) and N4 (Often feel blue. (q_1479)). It seems an axis of sociability. For axis 2, positive correlation appears for N3-Have frequent mood swings. (q_1099), N2 (Get irritated easily. (q_974)), N1 (Get angry easily. (q_952)) and inversely associated to E1 (not so intense): it seems an axis of psicological stability.*
+
+**9.	A Non-normalized Principal Component Analysis is addressed using as supplementary variables gender, education and age. How many axes do you have to retain according to Kaiser criteria? What’s the inertia explained by retained Kaiser-based principal components?**
+
+*Strictly following Kaiser criteria, we have to retain as many axes as eigenvalues greater than 1.995566 (mean eigenvalue value). 6 axes satisfy the condition and explain 58.50% of the total inertia.*
+
+```{r}
+names(df)
+res.pcann<-PCA(df[,c(1:25,28:30)],quali.sup=27:28,quanti.sup=26,scale.unit = FALSE )
+summary(res.pcann,nb.dec=2,nbind=0,ncp=2,nbelements = 25)
+mean(res.pcann$eig[,1])
+```
+
+**10.	A Hierarchical Clustering is addressed. A non-default criteria for selecting the number of clusters to 3 has to be set. Explain the characteristics of cluster number 1.**
+
+```{r}
+# 6 dimensions have to be selected according to Kaiser's criteria
+res.pca<-PCA(df[,c(1:25,28:30)],quali.sup=27:28,quanti.sup=26,ncp=6)
+res.hcpc<-HCPC(res.pca,nb.clust=-1,graph=T)
+res.hcpc$desc.var
+(res.hcpc$call$t$within[1]-res.hcpc$call$t$within[3])/res.hcpc$call$t$within[1]
+```
+
+*Three clusters are selected which it is enough to represent the complexity of this dataset (it explains less than 26% of total inertia in data). Cluster 1 contains 39% of the male observations in the sample. On average 32.82% of the data units belong to male gender, but in Cluster 1 males are overrepresented (42.6%). 'Unknown' is also overrepresented being 12.5% in Cluster 1 and 8% globally and 'some graduate' educated people represents 44.61% of the sample, but only 38.21% of them are included in Cluster 1.*
+
+*Cluster 1 shows  mean values of E2, E1, C5 and C4 remarkably over the global mean, while the global mean in the sample, while E3, E4, A3 are clearly under the global mean in this cluster. It indicates difficult approach and not very social and communicative behavior.*
+
+**Do not forget to Knit to .pdf before posting your answers in ATENEA. **

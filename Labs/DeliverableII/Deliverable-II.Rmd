@@ -3,6 +3,9 @@ output:
   word_document:
     toc: no
     toc_depth: '4'
+  pdf_document:
+    toc: no
+    toc_depth: '4'
 ---
 # Load Required Packages: to be increased over the course
 
@@ -10,7 +13,7 @@ output:
 # Load Required Packages: to be increased over the course
 options(contrasts=c("contr.treatment","contr.treatment"))
 
-requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","ggpubr")
+requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","ggpubr", "corrplot")
 missingPackages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
 
 if(length(missingPackages)) install.packages(missingPackages)
@@ -38,9 +41,7 @@ df <- read.table("Deliverable1.csv",header=T, sep=",");
 
 ```
 
-
-# Principal Component Analysis
-
+## Modify Data
 ```{r}
 vars_dis <- c("VendorID", "Payment_type", "Store_and_fwd_flag",  "RateCodeID", "f.Extra", "f.MTA_tax", "f.Improvement_surcharge", "lpep_pickup_period", "Trip_type", "lpep_pickup_date", "multiouts", "f.espeed", "f.tlenkm", "f.traveltime", "f.distHaversine", "AnyToll", "f.Fare_amount", "f.Passenger_count")
 
@@ -54,84 +55,109 @@ vars_res <- c("AnyTip", "Total_amount")
 d1 <- dim(df)[1]
 d2 <- dim(df)[2]
 df[,d2-1] <- as.factor(df[,d2-1])
+```
 
-#Todas las categoricas como suplementarias. Numericas suplementarias: Pickup_longitude, Pickup_latitude, Dropoff_longitude, Dropoff_latitude, total_amount
-res.pca<-PCA(df[,c(1:10,19:(d2-2),d2)],quali.sup=c(1:10),quanti.sup=c(13:16,24), ncp=4, ind.sup = which(df$multiouts==TRUE)) 
+###### Principal Component Analysis (PCA)
 
-# Multivariant outliers should be included as supplementary observations
+```{r}
+res.pca<-PCA(df[,c(1:10,19:(d2-2),d2)],quali.sup=c(1:10),quanti.sup=c(13:16,24), ncp=4, ind.sup = which(df$multiouts==TRUE))
+```
+Para realizar PCA, hemos decidido decidido dividir el dataset en:
+-Variables numericas activas: Passenger_count, tlenkm, Fare_amount, espeed, Tip_amount, Tolls_amount, lpep_pickup_time, traveltime, distHaversine.
+-Variables numericas suplementarias:Pickup_longitude, Pickup_latitude, Dropoff_longitude, Dropoff_latitude, total_amount.
+-Variables categoricas suplementarias: VendorID, Payment_type, Store_and_fwd_flag, RateCodeID, f.Extra, f.MTA_tax, f.Improvement_surcharge, lpep_pickup_period, Trip_type, lpep_pickup_date.
+-Individuos activos: aquellos individuos sin outliers multivariante.
+-Individuos suplementarios: aquellos individuos con outliers multivariante. En este caso son los individuos cuyos indices en el dataset son 1737 1855 2445.
+### Eigenvalues and dominant axes analysis.
 
-plot.PCA(res.pca,choix=c("var"),invisible=c("quanti.sup"))
-plot.PCA(res.pca,choix=c("var"),invisible=c("var"))
-#plot.PCA(res.pca,choix=c("ind"))
-plot.PCA(res.pca,choix=c("ind"),invisible=c("ind"))
-
-
-plot.PCA(res.pca,choix=c("var"),invisible=c("quanti.sup"), axes=c(3,4))
-plot.PCA(res.pca,choix=c("var"),invisible=c("var"), axes=c(3,4))
-#plot.PCA(res.pca,choix=c("ind"), axes=c(3,4))
-plot.PCA(res.pca,choix=c("ind"),invisible=c("ind"), axes=c(3,4))
-
-
-
-### I. Eigenvalues and dominant axes. How many axes we have to interpret? ###
-names(res.pca)
-
-#summary(res.pca) # Customization is needed
+```{r}
 summary(res.pca,nb.dec=2,nbind=1,nbelements=1000,ncp=4)
-
-
+fviz_eig(res.pca, choice = "eigenvalue", addlabels = TRUE)
+fviz_eig(res.pca, addlabels = TRUE)
 ```
+En esta imagen podemos ver los valores propios. Como podemos ver hasta la tercera dimensión tenemos un valor propio igual a 1. Según el criterio de Kaiser deberíamos eliminar todas las componentes con valor propio por debajo de 1, lo que significa que deberíamos coger hasta la tercera dimension. Segun la regla de Elbow, debemos coger hasta que no haya un descenso significativo, lo que significa que también se debería coger hasta la terecera dimensio. A pesar de todo, hemos decidido incluir hasta la cuarta dimensión, ya que nos facilita el estudio. Como podemos ver a partir del summary, hasta la cuarta dimensión encontramos una varianza acumulada del 78.75%. También podemos admirar como la primera dimensión contribuye mucho en el PCA, explicando un 41.9% de la varianza.
 
-# Factoextra
 
+
+## Quality of representation
 ```{r}
-library(factoextra)
-library(ggpubr)
-fviz_eig(res.pca, addlabels = TRUE, ylim = c(0, 50))
-fviz_pca_var(res.pca, col.var = "steelblue")
-library("corrplot")
-#res.pca
-corrplot(res.pca$var$coord, is.corr=FALSE)
 corrplot(res.pca$var$cos2, is.corr=FALSE)
-
-fviz_cos2(res.pca, choice = "var", axes = 1:2)
-fviz_cos2(res.pca, choice = "ind", axes = 1:2)
-
-# Color by cos2 values: quality on the factor map
-fviz_pca_var(res.pca, col.var = "cos2", gradient.cols = c("white", "blue", "red"), repel = TRUE, legend.title="Nice plot") # Avoid text overlapping
-
-# Contributions of variables to PC1
-fviz_contrib(res.pca, choice = "var", axes = 1:2, top = 10)
-fviz_contrib(res.pca, choice = "ind", axes = 1:2, top = 10)
-res.desc <- dimdesc(res.pca, axes = c(1,2), proba = 0.05)
-res.desc$Dim.1
+fviz_cos2(res.pca, choice = "var", axes = 1:2, top = 10)
+fviz_cos2(res.pca, choice = "var", axes = 3:4, top = 10)
+fviz_cos2(res.pca, choice = "ind", axes = 1:2, top = 10)
+fviz_cos2(res.pca, choice = "ind", axes = 3:4, top = 10)
 ```
+A partir de la suma del coseno al cuadrado de la primera dimensión más el coseno al cuadrado de la segunda dimensión podemos obtener cualidad de las variables en el primer plano factorial. Como podemos ver tlenkm y distHaversine son las dos variables que mejor se representan el primer plano factorial.
 
-## HCPC
+
+## Contribution
 
 ```{r}
-#res.hcpc<-HCPC(res.pca,order=TRUE)
+corrplot(res.pca$var$contrib, is.corr=FALSE)
+fviz_contrib(res.pca, choice = "var", axes = 1:2, top = 10)
+fviz_contrib(res.pca, choice = "var", axes = 3:4, top = 10)
+fviz_contrib(res.pca, choice = "ind", axes = 1:2, top = 10)
+fviz_contrib(res.pca, choice = "ind", axes = 3:4, top = 10)
+```
+En este plot encontramos las 10 variables que contribuyen mas en el primer plano factorial. Como podemos ver la variable tlenkm es la variable que contribuye más junto con la variable distHaversine. Si vemos el segundo plano factorial, vemos que el numero total de pasajeros y el numero total de pagos por peajes influyen bastante en el segundo plano factorial.
+En este plot encontramos los 10 individuos que contribuyen más en el primer plano factorial. Como podemos ver el individuo 3370 es el individuo que contribuye más, junto con el individuo 3064 al primer plano factorial. Si vemos el segundo plano factorial, vemos que el individuo 3206 y el individuo 1840, son los individuos que contribuyen más el segundo plano factorial.
+
+
+##### Interpreting the axes
+
+### Variables numericas
+
+```{r}
+plot.PCA(res.pca,choix=c("var"), axes=c(1,2))
+plot.PCA(res.pca,choix=c("var"), axes=c(3,4))
+```
+
+
+## Variables numericas activas
+```{r}
+corrplot(res.pca$var$coord, is.corr=FALSE)
+plot.PCA(res.pca,choix=c("var"),invisible=c("quanti.sup"), axes=c(1,2))
+plot.PCA(res.pca,choix=c("var"),invisible=c("quanti.sup"), axes=c(3,4))
+```
+
+## Variables numericas suplementarias
+```{r}
+corrplot(res.pca$quanti.sup$coord, is.corr=FALSE)
+plot.PCA(res.pca,choix=c("var"),invisible=c("var"), axes=c(1,2))
+plot.PCA(res.pca,choix=c("var"),invisible=c("var"), axes=c(3,4))
+```
+### Variables categoricas suplementarias
+
+```{r}
+plot.PCA(res.pca,choix=c("ind"), invisible = c("ind", "ind.sup"), axes=c(1,2))
+plot.PCA(res.pca,choix=c("ind"), invisible = c("ind", "ind.sup"), axes=c(3,4))
+```
+
+### Individuos 
+```{r}
+plot(res.pca,choix=c("ind"),invisible = c("ind.sup", "var", "quali"),select="contrib 10", axes=c(1,2))
+plot(res.pca,choix=c("ind"),invisible = c("ind.sup", "var", "quali"),select="contrib 10", axes=c(3,4))
+```
+### Individuos suplementarios
+```{r}
+plot(res.pca,choix=c("ind"),invisible = c("ind", "var", "quali"), axes=c(1,2))
+plot(res.pca,choix=c("ind"),invisible = c("ind", "var", "quali"), axes=c(3,4))
+```
+
+
+############################## HCPC
+
+```{r}
 res.hcpc<-HCPC(res.pca,nb.clust = -1,order=TRUE)
-names(res.hcpc)
-#res.hcpc<-HCPC(res.pca,min=8,max=12)
-### Interpretar los resultados de la clasificación
+```
+Viendo la inertia gain (pérdida importante de ir entre n clusters a n+1 clusters) y aplicando Kaiser Rule podemos ver que el número de clusters óptimo es 6.
 
-################################
-#Numero de individuos por cluster
+
+###### Interpretar los resultados de la clasificación
+
+
+```{r}
 barplot(table(res.hcpc$data.clust$clust))
-#Descripcion de los clusters segun los ejes princiaples (ejes factoriales)
-res.hcpc$desc.axes
-#catdes(res.hcpc$data.clust,dim(res.hcpc$data.clust)[2]) # Jusificacion de la descripcion de los clusters segun las variables cualitativas.
-#Descripcion de los clusters segun las variables cualitativas
-res.hcpc$desc.var 
-#Descripcion de los clusters segun los individuos 
-res.hcpc$desc.ind 
-#####################
-
-
-### Interpretar los resultados de la clasificación
-
-
 summary(res.hcpc$data.clust$clust)
 
 
@@ -159,6 +185,7 @@ res.hcpc$desc.var$quanti
 
 ### desc.axes ###
 ### B. The description of the clusters by the axes ###
+res.hcpc$desc.axes
 names(res.hcpc$desc.axes)
 res.hcpc$desc.axes$quanti.var
 res.hcpc$desc.axes$quanti
@@ -213,29 +240,26 @@ res.hcpc$call$t$quot[1:6]
 
 ### Inertia gain ###
 res.hcpc$call$t$inert.gain[1:6]
-df$hcpck<-res.hcpc$data.clust$clust
+#df$hcpck<-res.hcpc$data.clust$clust
 
 ####
 #### THE END
 ####
 ```
 
-## Classification
+## K-Means
 
 ```{r}
 
-# Kmeans: Partitioning in k=7 groups
 res.pca<-PCA(df[,c(1:10,19:(d2-2),d2)],quali.sup=c(1:10),quanti.sup=c(13:16,24), ncp=5, graph= FALSE) 
 ppcc<-res.pca$ind$coord[,1:5]
 dim(ppcc)
 
 library("factoextra")
-fviz_nbclust(ppcc, kmeans, method = "gap_stat")
+#fviz_nbclust(ppcc, kmeans, method = "gap_stat")
 library("NbClust") # It takes a lot ....
 set.seed(123)
-res.nbclust <- NbClust(ppcc, distance = "euclidean",
-                  min.nc = 2, max.nc = 10, 
-                  method = "complete", index ="all") # Time consuming
+#res.nbclust <- NbClust(ppcc, distance = "euclidean", min.nc = 2, max.nc = 10, method = "complete", index ="all") # Time consuming
 
 dist<-dist(ppcc)
 kc<-kmeans(dist,6, iter.max = 30, trace=T)
@@ -245,18 +269,20 @@ df[names(kc$cluster),"claKM"]<-kc$cluster
 df$claKM<-factor(df$claKM)
 kc$betweenss/kc$totss
 
-names(df)
-catdes(df,38)
+#names(df)
+#catdes(df,38)
 
 # Confusion table
 
-table(df$hcpck,df$claKM)
+#table(df$hcpck,df$claKM)
 
-df$hcpck<-factor(df$hcpck,labels=paste("kHP-",1:6))
-df$claKM<-factor(df$claKM,levels=c(3,6,2,1,5,4),labels=c("kKM-3","kKM-6","kKM-2","kKM-1","kKM-5","kKM-4"))
-tt<-table(df$hcpck,df$claKM)
-tt
-sum(diag(tt)/sum(tt))
+#df$hcpck<-factor(df$hcpck,labels=paste("kHP-",1:6))
+#df$claKM<-factor(df$claKM,levels=c(3,6,2,1,5,4),labels=c("kKM-3","kKM-6","kKM-2","kKM-1","kKM-5","kKM-4"))
+#tt<-table(df$hcpck,df$claKM)
+#tt
+#sum(diag(tt)/sum(tt))
 ```
+
+
 
 

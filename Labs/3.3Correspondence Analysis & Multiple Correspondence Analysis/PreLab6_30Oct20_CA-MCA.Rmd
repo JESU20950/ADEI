@@ -1,0 +1,287 @@
+---
+title: "Deliverable II.  CA-MCA"
+author: "Lidia Montero"
+date: \today
+output:
+  pdf_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+  html_document:
+    toc: no
+    toc_depth: '4'
+  word_document:
+    toc: no
+    toc_depth: '4'
+geometry: left=1.9cm,right=1.9cm,top=1.25cm,bottom=1.52cm
+fontsize: 18pt
+subtitle: 'Lab Session 6 - CA and MCA - Clustering and Classification'
+classoption: a4paper
+editor_options: 
+  chunk_output_type: console
+---
+
+# Presentation - Títol nivell 1
+## R Markdowns document - Títol nivell 2
+
+This is an R Markdown document. 
+We are showing some examples of GLMz. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. Use * to provide emphasis such as *italics* and **bold**.
+
+Create lists: Unordered * and +     or   ordered   1. 2.  
+
+  1. Item 1
+  2. Item 2
+    + Item 2a
+    + Item 2b
+
+# Header 1
+## Header 2
+
+## Data Description
+
+Description http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml
+Data Dictionary - SHL Trip Records -This data dictionary describes SHL trip data in visit http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml:
+
+  - VendorID	A code indicating the LPEP provider that provided the record.      1= Creative Mobile Technologies, LLC; 2= VeriFone Inc.   
+  - lpep_pickup_datetime	The date and time when the meter was engaged.    
+  - lpep_dropoff_datetime	The date and time when the meter was disengaged.     
+  - Passenger_count	The number of passengers in the vehicle. This is a driver-entered value.    -  Trip_distance 	The elapsed trip distance in miles reported by the taximeter.   
+  - Pickup_longitude	 Longitude where the meter was engaged.   
+  - Pickup_latitude	Latitude where the meter was engaged.   
+  - RateCodeID	The final rate code in effect at the end of the trip.  1= Standard rate  2=JFK 3=Newark 4=Nassau or Westchester 5=Negotiated fare 6=Group ride   
+  - Store_and_fwd_flag	This flag indicates whether the trip record was held in vehicle memory before sending to the vendor, aka "store and forward," because the vehicle did not have a connection to the server: Y= store and forward trip  N= not a store and forward trip   
+  - Dropoff_longitude	Longitude where the meter was timed off.   
+  - Dropoff_ latitude	Latitude where the meter was timed off.   
+  - Payment_type	A numeric code signifying how the passenger paid for the trip.  1= Credit card 2= Cash 3= No charge 4= Dispute 5= Unknown 6= Voided trip   
+  - Fare_amount	The time-and-distance fare calculated by the meter.   
+  - Extra	 Miscellaneous extras and surcharges.  Currently, this only includes the $0.50 and $1 rush hour and overnight charges. 
+  - MTA_tax	 $0.50 MTA tax that is automatically triggered based on the metered rate in use.    - Improvement_surcharge	$0.30 improvement surcharge assessed on hailed trips at the flag   drop. The improvement surcharge began being levied in 2015.   
+  - Tip_amount	 This field is automatically populated for credit card tips. Cash tips are not included.   
+  - Tolls_amount	Total amount of all tolls paid in trip.    
+  - Total_amount	The total amount charged to passengers. Does not include cash tips.   
+  - Trip_type	A code indicating whether the trip was a street-hail or a dispatch that is automatically assigned based on the metered rate in use but can be altered by the driver. 
+1= Street-hail 2= Dispatch  
+
+# Load Required Packages: to be increased over the course
+
+```{r}
+# Load Required Packages: to be increased over the course
+options(contrasts=c("contr.treatment","contr.treatment"))
+
+requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","ggpubr")
+missingPackages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
+
+if(length(missingPackages)) install.packages(missingPackages)
+lapply(requiredPackages, require, character.only = TRUE)
+
+```
+
+## Load Processed data
+
+```{r}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+setwd("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS")
+#setwd("D:/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS")
+filepath<-"C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS/"
+# green_tripdata_2016-01
+
+### Load  workspace already clean and prepared
+
+load(paste0(filepath,"MyTaxi5000Clean.RData"))
+summary(df)
+
+```
+
+# Correspondence Analysis
+
+```{r}
+names(df)
+vars_res<-names(df)[c(15,23)]
+vars_con<-names(df)[c(7:14,17:21)]
+vars_dis<-names(df)[c(1:2,16,22,24:36)]
+
+tt<-table(df[,c("f.cost","period")])
+tt
+res.ca<-CA(tt)
+plot(res.ca$col$coord[,1],res.ca$col$coord[,2],pch=19,col="red")
+points(res.ca$row$coord[,1],res.ca$row$coord[,2],pch=19,col="blue")
+text(res.ca$row$coord[,1],res.ca$row$coord[,2],labels=levels(df$f.cost),col="blue")
+lines(res.ca$row$coord[,1],res.ca$row$coord[,2],lwd=2,col="blue")
+lines(res.ca$col$coord[,1],res.ca$col$coord[,2],lwd=2,col="red")
+text(res.ca$col$coord[,1],res.ca$col$coord[,2],labels=levels(df$period),col="red")
+
+names(res.ca)
+fviz_eig(res.ca)
+summary(res.ca,dig=2)
+fviz_ca_biplot(res.ca,repel=TRUE)+theme_bw()
+# Traditional analysis by contingency tables
+prop.table(tt,1)
+prop.table(tt,2)
+chisq.test(tt)
+
+tt<-table(df[,c("f.cost","f.tt")])
+tt
+res.ca<-CA(tt)
+plot(res.ca$col$coord[,1],res.ca$col$coord[,2],pch=19,col="red")
+points(res.ca$row$coord[,1],res.ca$row$coord[,2],pch=19,col="blue")
+text(res.ca$row$coord[,1],res.ca$row$coord[,2],labels=levels(df$f.cost),col="blue")
+lines(res.ca$row$coord[,1],res.ca$row$coord[,2],lwd=2,col="blue")
+lines(res.ca$col$coord[,1],res.ca$col$coord[,2],lwd=2,col="red")
+text(res.ca$col$coord[,1],res.ca$col$coord[,2],labels=levels(df$f.tt),col="red")
+
+summary(res.ca)
+
+# Traditional analysis by contingency tables
+prop.table(tt,1)
+prop.table(tt,2)
+chisq.test(tt)
+```
+
+# MCA using multivariant
+
+```{r}
+par(mfrow=c(1,1))
+res.mca<-MCA(df[,c(vars_dis,"Total_amount")],quali.sup=c(5,14),quanti.sup=19)
+summary(res.mca,nbelements=50)
+mean(res.mca$eig[,1]) # Indica fins dim 23 o criteri Inercia explicada 80-90% ?s 30
+
+# Individual Representation
+plot.MCA(res.mca,choix=c("ind"),cex=0.8)
+plot.MCA(res.mca,choix=c("ind"),invisible=c("ind"),cex=0.8)
+
+# Representation of categories
+plot.MCA(res.mca,choix=c("ind"),invisible=c("ind"),axes=c(1,2))
+
+names(res.mca)
+res.mca$var
+plot.MCA(res.mca,choix=c("ind"),invisible=c("ind"),axes=c(3,4))
+plot.MCA(res.mca,choix=c("var"),axes=c(3,4))
+
+# Use modern ggplot facilities
+names(res.mca)
+fviz_eig(res.mca)
+fviz_cos2(res.mca, choice = "var", axes = 1:2)+theme_bw()
+fviz_contrib(res.mca, choice = "var", axes = 3:4)+theme_bw()
+fviz_mca_var(res.mca, col.var="contrib",repel=TRUE)+
+    scale_color_gradient2(low="green", mid="blue", 
+    high="red", midpoint=0.75)+theme_bw()
+
+fviz_mca_biplot(res.mca, invisible="ind",axes=1:2,repel=FALSE)+theme_bw()
+#fviz_mca_biplot(res.mca, axes=1:2,repel=TRUE,arrows=c(TRUE,FALSE))+theme_bw()
+```
+
+# Synthesis through HCPC: Hierarchical Clustering
+
+```{r}
+###
+### Clustering the individuals
+### Before, hou have to perform a PCA with the number of axes 
+### that you have decided to take into account (indicated through ncp=)
+?HCPC
+res.mca<-MCA(df[,c(vars_dis,"Total_amount")],quali.sup=c(5,14),quanti.sup=19,ncp=30)
+res.hcpc<-HCPC(res.mca,nb.clust=8,order=TRUE)
+names(res.hcpc)
+
+names(res.hcpc$call$t)
+res.hcpc$call$t$inert.gain[1:8]
+res.hcpc$call$t$quot
+res.hcpc$call$t$within[1:8]
+sum(res.hcpc$call$t$inert.gain[1:8])/res.hcpc$call$t$within[1]
+
+df$claHP<-8
+df[row.names(res.hcpc$data.clust),"claHP"]<-res.hcpc$data.clust$clust
+df$claHP<-factor(df$claHP)
+summary(res.hcpc$data.clust$clust)
+table(df$claHP)
+
+### Interpret clustering results
+summary(res.hcpc$data.clust$clust)
+
+#Block A: res.hcpc$desc.var
+#Block B: res.hcpc$desc.axes
+#Block C: res.hcpc$desc.ind
+
+
+### desc.var ###
+### A. The description of the clusters by the variables ###
+names(res.hcpc$desc.var)
+res.hcpc$desc.var
+### desc.var$test.chi2 ###
+### A.1. The categorical variables which characterizes the clusters ###
+res.hcpc$desc.var$test.chi2
+
+### desc.var$category ###
+### A.2. The description of each cluster by the categories ##
+res.hcpc$desc.var$category
+
+### desc.var$quanti.var ###
+### A.3. The quantitative variables which characterizes the clusters ###
+res.hcpc$desc.var$quanti.var
+
+### desc.var$quanti ###
+### A.4. The description of each cluster by the quantitative variables ###
+res.hcpc$desc.var$quanti
+
+### desc.axes ###
+### B. The description of the clusters by the axes ###
+names(res.hcpc$desc.axes)
+res.hcpc$desc.axes
+res.hcpc$desc.axes$quanti.var
+res.hcpc$desc.axes$quanti
+
+### desc.ind ###
+### C. The description of the clusters by the individuals ###
+names(res.hcpc$desc.ind)
+res.hcpc$desc.ind$para
+res.hcpc$desc.ind$dist
+
+#### Characteristic individuals
+para1<-which(rownames(res.mca$ind$coord)%in%names(res.hcpc$desc.ind$para[[1]]))
+para2<-which(rownames(res.mca$ind$coord)%in%names(res.hcpc$desc.ind$para[[2]]))
+para3<-which(rownames(res.mca$ind$coord)%in%names(res.hcpc$desc.ind$para[[3]]))
+# to be completed...
+
+plot(res.mca,label="none",invisible=c("quali"))
+points(res.mca$ind$coord[para1,1],res.mca$ind$coord[para1,2],col="magenta",cex=2,pch=16) # Not work
+
+# Dendrogram
+fviz_dend(res.hcpc, show_labels = FALSE)
+# Individuals factor map
+fviz_cluster(res.hcpc, geom = "point", main = "Factor map")
+
+res.mca<-MCA(df[,c(vars_dis,"Total_amount","claHP")],quali.sup=c(5,14,20),quanti.sup=19,ncp=30)
+fviz_mca_ind(res.mca, 
+             label = "none", invisible=c("ind.sup"),# hide individual labels
+             habillage = "claHP", # color by groups 
+             addEllipses = TRUE, ellipse.type = "confidence",
+             ggtheme = theme_bw()) 
+```
+
+# Kmeans: Partitioning in k=8 groups
+
+```{r}
+vars_conpca
+
+res.mca<-MCA(df[,c(vars_dis,"Total_amount")],quali.sup=c(5,14),quanti.sup=19,ncp=30)
+summary(res.mca)
+ppcc<-res.mca$ind$coord[,1:29]
+dim(ppcc)
+kc<-kmeans(dist(ppcc),8, iter.max = 30, trace=T)
+
+df[names(kc$cluster),"claKM"]<-kc$cluster
+kc$betweenss/kc$totss
+
+#fviz_nbclust(ppcc, kmeans, method = "gap_stat")  # It takes a lot !
+library("NbClust") # It takes a lot ....
+set.seed(123)
+res.nbclust <- NbClust(ppcc, distance = "euclidean",
+                  min.nc = 5, max.nc = 12, 
+                  method = "complete", index ="all") 
+
+```
+
