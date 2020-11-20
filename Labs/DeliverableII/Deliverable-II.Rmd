@@ -43,7 +43,7 @@ df <- read.table("Deliverable1.csv",header=T, sep=",");
 
 ## Modify Data
 ```{r}
-vars_dis <- c("VendorID", "Payment_type", "Store_and_fwd_flag",  "RateCodeID", "f.Extra", "f.MTA_tax", "f.Improvement_surcharge", "lpep_pickup_period", "Trip_type", "lpep_pickup_date", "multiouts", "f.espeed", "f.tlenkm", "f.traveltime", "f.distHaversine", "AnyToll", "f.Fare_amount", "f.Passenger_count")
+vars_dis <- c("VendorID", "Payment_type", "Store_and_fwd_flag",  "RateCodeID", "f.Extra", "f.MTA_tax", "f.Improvement_surcharge", "lpep_pickup_period", "Trip_type", "lpep_pickup_date", "multiouts", "f.espeed", "f.tlenkm", "f.traveltime", "f.distHaversine", "AnyToll", "f.Fare_amount", "f.Passenger_count", "f.Total_amount")
 
 vars_con <- c( "Passenger_count", "tlenkm", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "espeed", "Tip_amount", "Tolls_amount", "lpep_pickup_time", "traveltime", "distHaversine")
 for( i in vars_dis){
@@ -60,7 +60,7 @@ df[,d2-1] <- as.factor(df[,d2-1])
 ###### Principal Component Analysis (PCA)
 
 ```{r}
-res.pca<-PCA(df[,c(1:10,19:(d2-2),d2)],quali.sup=c(1:10),quanti.sup=c(13:16,24), ncp=4, ind.sup = which(df$multiouts==TRUE))
+res.pca<-PCA(df[,c(1:10,20:(d2-2),d2)],quali.sup=c(1:10),quanti.sup=c(13:16,24), ncp=4, ind.sup = which(df$multiouts==TRUE))
 ```
 Para realizar PCA, hemos decidido decidido dividir el dataset en:
 -Variables numericas activas: Passenger_count, tlenkm, Fare_amount, espeed, Tip_amount, Tolls_amount, lpep_pickup_time, traveltime, distHaversine.
@@ -148,7 +148,9 @@ plot(res.pca,choix=c("ind"),invisible = c("ind", "var", "quali"), axes=c(3,4))
 ############################## HCPC
 
 ```{r}
+res.pca<-PCA(df[,c(1:10,20:(d2-2),d2)],quali.sup=c(1:10),quanti.sup=c(13:16,24), ncp=4, graph= FALSE)
 res.hcpc<-HCPC(res.pca,nb.clust = -1,order=TRUE)
+df$hcpck<-res.hcpc$data.clust$clust
 ```
 Viendo la inertia gain (pérdida importante de ir entre n clusters a n+1 clusters) y aplicando Kaiser Rule podemos ver que el número de clusters óptimo es 6.
 
@@ -159,56 +161,129 @@ Viendo la inertia gain (pérdida importante de ir entre n clusters a n+1 cluster
 ```{r}
 barplot(table(res.hcpc$data.clust$clust))
 summary(res.hcpc$data.clust$clust)
+```
 
 
-### desc.var ###
+
 ### A. The description of the clusters by the variables ###
-names(res.hcpc$desc.var)
 
-### desc.var$test.chi2 ###
+
 ### A.1. The categorical variables which characterizes the clusters ###
+
+```{r}
 res.hcpc$desc.var$test.chi2
+```
 
-
-### desc.var$category ###
 ### A.2. The description of each cluster by the categories ##
+```{r}
 res.hcpc$desc.var$category
-#Mod/Cluster Tanto porciento del cluster que forma parte de la modalidad.
+```
+Cluster 1
 
-### desc.var$quanti.var ###
+Por lo que hace a las categorías pertenecientes a las variables de tipo factor pertenecientes al cluster 1, y dado el tratamiento que hemos aplicado a nuestros datos, podemos observar como las dos categorías más características de este serían, por un lado el pago mediante efectivo. Este pago en efectivo tiene una representación global de un 50.15% cuando en el cluster 1 esta es de 56.78% por lo que podemos decir que esta categoría aparece sobrerepresentada en este cluster en concreto. Además, vemos como un 70.63% de todas las observaciones donde el pago es en efectivo, aparecen en el cluster 1, esto también pdría justificarse por el gran número de observaciones pertenecientes a este cluster en comparación a los demás.
+
+Debido a esta sobrerrepresentación, podemos ver que, por el contrario, el pago con tarjeta está infrarepresentado pasando de una representación global del 49.29% al 42.64% dentro de este cluster. Y además, tenemos que del total de observaciones donde el pago se realiza mediante tarjeta de crédito, cerca de un 54% están en este cluster.
+
+No solo són estas las categorías caracterizadas por este cluster ya que todas las que aparecen en el output de res.hcpc$desc.var$category, aún así, són las más destacables.
+
+Cluster 2
+
+Para el cluster 2, la categoría que podemos destacar debido a su sobrerepresentación és la del VendorID = Verizone. Esta categoría representa un 77.95% de las observaciones globales cuando en este cluster número 2 estas observaciones ascienden a un 94.76%. Por el contrario, seguramente debido a las pocas observaciones pertenecientes a este cluster, las pertenecientes al cluster 2 con VendorID = Verizone solo representan cerca del 7% de las observaciones totales con este VendorID.
+
+Por otro lado, como categoría infrarepresentada, como es obvio ya que se trata de un factor binario, tendríamos la perteneciente a las observaciones donde VendorID = Mobile que representan el complementario en cuanto a observaciones globales, un 22.05% así como a las pertenecientes al propio cluster, un 5.24%. Además podemos ver como las observaciones de esta categoría pertenecientes a este cluster, solo suponen un 1.36% de las observaciones totales.
+
+Cluster 3
+
+A diferencia del cluster 1, esta vez tenemos sobrerepresentada la categoría de pago mediante tarjeta de crédito. Esta presenta como ya hemos dicho un 49.29% de las observaciones globales y, en cambio, en este cluster ascienden hasta un 60.66% suponiendo un 29.8% las observaciones pertenecientes a este cluster del total de observaciones donde la tarjeta de crédito aparece como método de pago.
+
+Por otro lado y como podemos suponer, tendremos como categoría infrarrepresentada la que denomina los pagos en efectivo de un 38.84% de observaciones dentro del cluster frente a un 50.15% de las observaciones globales. Finalmente mencionar que estas observaciones suponen un 18.75% de las observaciones totales de nuestra muestra donde los pagos son en efectivo.
+
+Cluster 4
+
+Debido al pequeño número de observaciones que tiene el cluster 4, cualquier categoría podría llegar a considerarse caracterizada. En este caso tendríamos la fecha de recogida 1/1/2016 que sufre una sobrerepresentación del 50% en este cluster frente al 4.54% de representación global que tiene. Las observaciones de esta fecha en el cluster 4 suponen un 1,32% de sus observaciones totales.
+
+Después tendríamos el periodo de recogida de noche que también aparece sobrerepresentado en este cluster de un 43.61% de observaciones en las que aparece a un 100% dentro de este cluster número 4, por lo que todas las observaciones dentro de este cluster tendrán como periodo de recogida, que este ha sido por la noche. Debido a que este periodo supone unas 2180 observaciones de nuestra muestra, por mucho porcentaje de estas que aparezca en el cluster, el número de observaciones que lo componen es mínimo, por lo que solo acaba representando un 0.84% de las observaciones donde este periodo es la noche.
+
+Y para terminar la fecha 30/1/2016 aparece también sobrerepresentada aumentando de un 4.76% de representación global hasta un 33.3% dentro de este cluster. Vemos también como la participación de esta fecha en el cluster número 4 solo supone un 0.84% del total de observaciones donde la fecha es la indicada.
+
+Cluster 5
+
+Para el cluster 5, las categorias más caracterizadas serían la de pago mediante tarjeta y mediante efectivo de nuevo. El pago con tarjeta está sobrerepresentado en este cluster(73.06%) respecto al porcentaje de observaciones totales de la misma categoria(49.29%). Además, las observaciones con la categoría Tarjeta de crédito dentro del cluster 5 suponen un 8.81% de las observaciones totales del tipo de pago Credit card. Y, por otro lado, el pago en efectivo se ve infrarepresentado pasando de un 50.15% de observaciones globales en toda nuestra muestra a un 25.93% dentro del cluster, lo que supone un 3.07% de las observaciones globales donde Tipo de pago es efectivo.
+
+Cluster 6
+
+Y para finalizar con el cluster 6 no tenemos dos/tres categorías que destaquen sobre el resto de las que nos presenta el desc.var$category. Vemos como el pago por tarjeta, el RateCodeID = Otros, el Extra 0, las fechas 4 y 31 de enero de 2016 así como el periodo de recogida del mediodía se ven sobrerepresentadas dentro de este último cluster. Y, por otro lado, el Extra = 0.5, la tarifa estándar y el tipo de pago en efectivo están infrarepresentadas dentro de este cluster número 6.
+
 ### A.3. The quantitative variables which characterizes the clusters ###
+```{r}
 res.hcpc$desc.var$quanti.var
-
-### desc.var$quanti ###
+```
+En el output de quanti.var podemos observar que dentro de las variables numéricas más asociadas a la muestra globalmente, las que predominan serían:
+  Passenger_count           Tip_amount
+  tlenkm                    Tolls_amount
+  Fare_amount               Traveltime
+  espeed                    distHaversine
+  Total_amount              lpep_pickup_time
+  
 ### A.4. The description of each cluster by the quantitative variables ###
-res.hcpc$desc.var$quanti
 
-### desc.axes ###
+```{r}
+res.hcpc$desc.var$quanti
+```
+Cluster 1
+Las variables más asociadas significativamente a este cluster son tlenkm, Fare_amount, distHaversine y Total_amount con medias inferiores en el propio cluster que las suyas en el global de las observaciones además de unas desviaciones inferiores también dentro del cluster que en general. Como ejemplo podemos considerar la variable de tlenkm cuya media global es de 4.56 vs la media dentro del cluster 1 que sería de 2.25, no solo significativa porque aparece en la lista sino que, observando la desviación estándar global que es 4.49 y la del provio cluster que sería de 1.12, está diferencia entre las medias de 4.55-2.25 = 2.3 representa más del 50% de la desviación total que sufre la variable en todas sus observaciones.
+
+Cluster 2
+La variable más asociada a este cluster es el número de pasajeros, también podríamos considerar el importe de propinas o incluso el distHaversine pero solo comentaremos la más significativa. Su media global se situa en 1.37 por lo que vemos que predominan los viajes con un solo pasajero, en cambio, en este cluster vemos que la media asciende hasta los 5.21 por lo que podemos considerar que si no son todas, la mayor parte de observaciones donde los pasajeros sean 6 y 5 estarán en este cluster.
+
+Cluster 3
+Las variables más asociadas al cluster 3 serían el Fare_amount seguida del distHaversine, el importe total y la distancia en km del trayecto. Observando la que nos indica el p valor que estaría más asociada(Fare_amount) podemos ver como existe una diferencia considerable entre la media global de sus observaciones(11.98) y la media dentro del cluster(17.32), de esto podemos deducir que seguramente el total_amount también tendrá una media mayor en este cluster y, por lo que podemos observar en el output del quanti para este cluster, esto es así y por tanto, podemos afirmar que los trayectos pertenecientes a este cluster son más caros que la media.
+
+Cluster 4
+Para este cluster, las variables más asociadas son la del tiempo de viaje y la de la hora de recogida. Destacar sobretodo la diferencia entre la media global de 12.97 y la media dentro del cluster de 396.69 del tiempo de trayecto, lo que nos muestra que los trayectos dentro de este cluster son los que a primera vista llevarán más tiempo de todos los demás.
+
+Cluster 5
+Las variables numéricas más asociadas a este cluster serían la distancia del trayecto en km, el distHaversine, el Fare_amount y el total_amount, seguidas por la velocidad efectiva y el importe de las propinas. Todas ellas con una media superior dentro del cluster respecto a su media global.
+
+Cluster 6
+La variable numérica más asociada dentro de este cluster sería la de Tolls_amount seguida del importe total. La media de la primera es de 0.092 mientras que dentro del cluster es de 5.54 siendo este el valor máximo de la misma, lo que da a entender que todas sus observaciones tendrán ese valor para dicha variable lo que da a entender que sean las mismas rutas, o almenos pasen por los mismos peajes durante todo el trayecto.
 ### B. The description of the clusters by the axes ###
-res.hcpc$desc.axes
-names(res.hcpc$desc.axes)
+
+```{r}
 res.hcpc$desc.axes$quanti.var
 res.hcpc$desc.axes$quanti
-
-### desc.ind ###
+```
 ### C. The description of the clusters by the individuals ###
-names(res.hcpc$desc.ind)
-res.hcpc$desc.ind$para
-res.hcpc$desc.ind$dist
 
-# Examinar los valores de los individuos que caracterizan a las clases
+```{r}
+res.hcpc$desc.ind$para
+```
+
+
+```{r}
+res.hcpc$desc.ind$dist
+```
+
 #### Characteristic individuals
+```{r}
+
 para1<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$para[[1]]))
 para2<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$para[[2]]))
 para3<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$para[[3]]))
-# to be completed...with as many clusters as you have selected
+para4<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$para[[4]]))
+para5<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$para[[5]]))
+para6<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$para[[6]]))
+
 
 dist1<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$dist[[1]]))
 dist2<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$dist[[2]]))
 dist3<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$dist[[3]]))
-# to be completed...with as many clusters as you have selected
+dist4<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$dist[[4]]))
+dist5<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$dist[[5]]))
+dist6<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$dist[[6]]))
 
-plot(res.pca,label="none",invisible=c("quali","ind.sup"))  # Potser no us va
+
+plot(res.pca,label="none",invisible=c("quali","ind.sup"))  
 plot(res.pca$ind$coord[,1],res.pca$ind$coord[,2],col="grey80",cex=0.5,pch=16)
 points(res.pca$ind$coord[para1,1],res.pca$ind$coord[para1,2],col="blue",cex=2,pch=16)
 points(res.pca$ind$coord[dist1,1],res.pca$ind$coord[dist1,2],col="orange",cex=2,pch=16)
@@ -216,73 +291,372 @@ points(res.pca$ind$coord[para2,1],res.pca$ind$coord[para2,2],col="blue",cex=2,pc
 points(res.pca$ind$coord[dist2,1],res.pca$ind$coord[dist2,2],col="orange",cex=2,pch=16)
 points(res.pca$ind$coord[para3,1],res.pca$ind$coord[para3,2],col="blue",cex=2,pch=16)
 points(res.pca$ind$coord[dist3,1],res.pca$ind$coord[dist3,2],col="orange",cex=2,pch=16)
-# to be completed...
+points(res.pca$ind$coord[para4,1],res.pca$ind$coord[para4,2],col="blue",cex=2,pch=16)
+points(res.pca$ind$coord[dist4,1],res.pca$ind$coord[dist4,2],col="orange",cex=2,pch=16)
+points(res.pca$ind$coord[para5,1],res.pca$ind$coord[para5,2],col="blue",cex=2,pch=16)
+points(res.pca$ind$coord[dist5,1],res.pca$ind$coord[dist5,2],col="orange",cex=2,pch=16)
+points(res.pca$ind$coord[para6,1],res.pca$ind$coord[para6,2],col="blue",cex=2,pch=16)
+points(res.pca$ind$coord[dist6,1],res.pca$ind$coord[dist6,2],col="orange",cex=2,pch=16)
+
 
 res.hcpc$data.clust[which(rownames(res.hcpc$data.clust)%in%names(res.hcpc$desc.ind$para[[1]])),]
 res.hcpc$data.clust[which(rownames(res.hcpc$data.clust)%in%names(res.hcpc$desc.ind$dist[[1]])),]
 res.hcpc$data.clust[which(rownames(res.hcpc$data.clust)%in%names(res.hcpc$desc.ind$para[[2]])),]
 res.hcpc$data.clust[which(rownames(res.hcpc$data.clust)%in%names(res.hcpc$desc.ind$dist[[2]])),]
-# to be completed...
- 
-# Partition quality
-#(res.hcpc$call$t$within[1]-res.hcpc$call$t$within['nb.clusters'])/res.hcpc$call$t$within[1]
-(res.hcpc$call$t$within[1]-res.hcpc$call$t$within[6])/res.hcpc$call$t$within[1]
+
+
+
+```
+
+
 ### Results for the hierarchical tree ###
-names(res.hcpc$call$t)
 
 ### The suggested level to cut the tree  ###
+```{r}
 res.hcpc$call$t$nb.clust
+```
 ### Within inertias ###
-res.hcpc$call$t$within[1:6]
-
+```{r}
+res.hcpc$call$t$within[1:res.hcpc$call$t$nb.clust]
+```
 ### Ratio between within inertias ###
-res.hcpc$call$t$quot[1:6]
+```{r}
+res.hcpc$call$t$quot[1:res.hcpc$call$t$nb.clust]
+```
 
 ### Inertia gain ###
-res.hcpc$call$t$inert.gain[1:6]
-#df$hcpck<-res.hcpc$data.clust$clust
-
-####
-#### THE END
-####
-```
-
-## K-Means
 
 ```{r}
+res.hcpc$call$t$inert.gain[1:res.hcpc$call$t$nb.clust]
+```
 
-res.pca<-PCA(df[,c(1:10,19:(d2-2),d2)],quali.sup=c(1:10),quanti.sup=c(13:16,24), ncp=5, graph= FALSE) 
-ppcc<-res.pca$ind$coord[,1:5]
-dim(ppcc)
+# Partition quality
 
-library("factoextra")
-#fviz_nbclust(ppcc, kmeans, method = "gap_stat")
-library("NbClust") # It takes a lot ....
-set.seed(123)
-#res.nbclust <- NbClust(ppcc, distance = "euclidean", min.nc = 2, max.nc = 10, method = "complete", index ="all") # Time consuming
+```{r}
+(res.hcpc$call$t$within[1]-res.hcpc$call$t$within[res.hcpc$call$t$nb.clust])/res.hcpc$call$t$within[1]
+```
+## Classification
 
+## K-Means: Partitioning in k=6
+
+```{r}
+res.pca<-PCA(df[,c(1:10,20:(d2-2),d2)],quali.sup=c(1:10),quanti.sup=c(13:16,24), ncp=4, graph= FALSE)
+ppcc<-res.pca$ind$coord[,1:4]
 dist<-dist(ppcc)
 kc<-kmeans(dist,6, iter.max = 30, trace=T)
+df$claKM<-factor(kc$cluster)
+```
 
-df$claKM<-0
-df[names(kc$cluster),"claKM"]<-kc$cluster
-df$claKM<-factor(df$claKM)
+
+```{r}
 kc$betweenss/kc$totss
+```
 
-#names(df)
-#catdes(df,38)
+## Profiling KM
+```{r}
+i <- which(names(df)=="claKM")
+res.cat<-catdes(df,i)
+```
+
+#Global association variables numeric
+```{r}
+res.cat$quanti.var
+```
+
+#Global association category categoricas
+```{r}
+res.cat$quanti
+```
+
+
+```{r}
+res.cat$test.chi2
+```
+
+	
+# description of each category 
+```{r}
+res.cat$category
+```
 
 # Confusion table
+```{r}
+df$hcpck<-factor(df$hcpck,labels=paste("kHP-",1:6))
+df$claKM<-factor(df$claKM,levels=c(3,6,2,1,5,4),labels=c("kKM-3","kKM-6","kKM-2","kKM-1","kKM-5","kKM-4"))
+tt<-table(df$hcpck,df$claKM)
+tt
+sum(diag(tt)/sum(tt))
+```
 
-#table(df$hcpck,df$claKM)
 
-#df$hcpck<-factor(df$hcpck,labels=paste("kHP-",1:6))
-#df$claKM<-factor(df$claKM,levels=c(3,6,2,1,5,4),labels=c("kKM-3","kKM-6","kKM-2","kKM-1","kKM-5","kKM-4"))
-#tt<-table(df$hcpck,df$claKM)
-#tt
-#sum(diag(tt)/sum(tt))
+################## Correspondence Analysis (CA)
+
+### CA in the factor Total amount and Pick up period
+
+```{r}
+tt<-table(df[,c("f.Total_amount","lpep_pickup_period")])
+tt
+chisq.test(tt)
+```
+Como podemos ver el p-value es 0.001935, menor que 0.05, por lo tanto es estadisticamente significativa y podriamos rechazar la hipotesis nula: filas y columnas son independientes. Como podemos ver en la tabla de contingencia hay valores inferiores a 5, por lo que la aproximación de Pearson's Chi-squares test puede ser incorrecta.
+
+```{r}
+res.ca<-CA(tt)
+#lines(res.ca$row$coord[,1],res.ca$row$coord[,2],lwd=2,col="blue")
+```
+
+
+
+```{r}
+summary(res.ca,dig=2)
+names(res.ca)
+fviz_eig(res.ca)
+fviz_ca_biplot(res.ca,repel=TRUE)+theme_bw()
+```
+
+
+
+### CA in Total amount and travel time
+
+```{r}
+tt<-table(df[,c("f.Total_amount","f.traveltime")])
+tt
+```
+
+```{r}
+chisq.test(tt)
+```
+Como podemos ver en la tabla de contingencia hay valores inferiores a 5, por lo que la aproximación de Pearson's Chi-squares test puede ser incorrecta. Si observamos el p-value 2.2e-16, es inferiror a 0.05 por lo tanto, podriamos rechazar la hipotesis nula.
+
+```{r}
+res.ca<-CA(tt)
+```
+Si vemos el primer plano factorial vemos como los factores estan muy bien representados. Vemos que aquellos viajes que duran entre 40 y 548 minutos tienen un coste entre 40 y 95.5. Los viajes entre 11 y 40 minutos tiene un coste mediano, entre 15 y 50. Y los viajes con coste bajo tienen una duración entre 0 y 15 minutos.
+
+```{r}
+plot(res.ca$row$coord[,1],res.ca$row$coord[,2],pch=19,col="blue",xlim=c(-1,3),ylim=c(-1,3),xlab="Axis 1",ylab="Axis 2",main="CA f.traveltime vs f.Total_amount")
+points(res.ca$col$coord[,1],res.ca$col$coord[,2],pch=19,lwd=2,col="red")
+#text(res.ca$row$coord[c(1,7,2,3,4,5,6),1],res.ca$row$coord[c(1,7,2,3,4,5,6),2],col="blue",labels=levels(df$f.traveltime))
+#text(res.ca$col$coord[c(3,1,2),1],res.ca$col$coord[c(3,1,2),2],col="red",labels=levels(df$f.Total_amount))
+lines(res.ca$row$coord[c(1,7,2:6),1],res.ca$row$coord[c(1,7,2:6),2],lwd=2,col="blue")
+lines(res.ca$col$coord[c(5,1:4),1],res.ca$col$coord[c(5,1:4),2],lwd=2,col="red")
+```
+
+En este imagen podemos ver perfectamente el efecto Guttman que se forma a partir de aplica CA.
+
+```{r}
+summary(res.ca)
+```
+
+Como podemos ver el estadistico de la chi square es igual a 6148.456 lo que significa que tienen una gran relación las dos variables. 
+```{r}
+mean(res.ca$eig[,1])  # Kaiser: how many dimensions to retain
+```
+
+Segun el criterio de Kaiser deberiamos coger aquellas dimensiones que tienen un valor propio superior a 0.3074228. Por lo tanto deberíamos coger hasta la segunda dimension.
+
+```{r}
+# Traditional analysis by contingency tables
+prop.table(tt,1);prop.table(table(df$f.tt))
+prop.table(tt,2);prop.table(table(df$f.cost))
+chisq.test(tt)
+```
+
+
+
+# MCA using multivariant
+
+```{r}
+res.mca<-MCA(df[,c(vars_dis,vars_res)],quali.sup=c(19,20),quanti.sup=21,ncp=35)
+summary(res.mca)
+```
+Como podemos ver nos vuelve a aparecer que el total amount esta realcionado con el travel time tal como nos aparecio haciendo CA. 
+
+
+## Quality of representation
+```{r}
+fviz_cos2(res.mca, choice = "var", axes = 1:2, top = 10)
+fviz_cos2(res.mca, choice = "var", axes = 3:4, top = 10)
+fviz_cos2(res.mca, choice = "ind", axes = 1:2, top = 10)
+fviz_cos2(res.mca, choice = "ind", axes = 3:4, top = 10)
+```
+
+
+## Contribution
+
+```{r}
+fviz_contrib(res.mca, choice = "var", axes = 1:2, top = 10)
+fviz_contrib(res.mca, choice = "var", axes = 3:4, top = 10)
+fviz_contrib(res.mca, choice = "ind", axes = 1:2, top = 10)
+fviz_contrib(res.mca, choice = "ind", axes = 3:4, top = 10)
+```
+
+
+
+### Eigenvalues and dominant axes analysis.
+
+```{r}
+summary(res.mca,nbelements=50,nbind=0)
+fviz_eig(res.mca,ncp=35)
+fviz_eig(res.mca, choice = "eigenvalue", addlabels = TRUE)
+fviz_eig(res.mca, addlabels = TRUE)
+```
+`
+```{r}
+mean(res.mca$eig[,1])
+```
+Segun el criterio de Kaiser generalizado deberíamos coger aquellas dimensiones cuyo valor propio sea superior a 0.055. Lo que significa que tendriamos que coger hasta la dimensión 35, esta dimensión proporciona un 74.4% de varianza acumulada. En contraposición si aplicamos la regla de Elbow deberíamos coger hasta la dimension 6. 
+
+
+
+
+### Individuos 
+
+```{r}
+plot(res.mca,choix=c("ind"),invisible = c("ind.sup", "var", "quali"),select="contrib 10", axes=c(1,2))
+plot(res.mca,choix=c("ind"),invisible = c("ind.sup", "var", "quali"),select="contrib 10", axes=c(3,4))
+```
+
+### Variables categoricas, variables numericas suplementarias y variables categoricas suplementarias
+
+```{r}
+plot(res.mca,choix=c("ind"), invisible = c("ind"), axes=c(1,2))
+plot(res.mca,choix=c("ind"), invisible = c("ind"), axes=c(3,4))
+plot.MCA(res.mca,choix=c("var"),axes=c(1,2))
+plot.MCA(res.mca,choix=c("var"),axes=c(3,4))
 ```
 
 
 
 
+##################### Synthesis through HCPC: Hierarchical Clustering
+
+```{r}
+res.mca<-MCA(df[,c(vars_dis,vars_res)],quali.sup=c(19,20),quanti.sup=21,ncp=35)
+res.hcpc<-HCPC(res.mca,nb.clust=-1,order=TRUE)
+```
+
+
+###### Interpretar los resultados de la clasificación
+
+
+```{r}
+barplot(table(res.hcpc$data.clust$clust))
+summary(res.hcpc$data.clust$clust)
+```
+
+
+
+### A. The description of the clusters by the variables ###
+
+
+### A.1. The categorical variables which characterizes the clusters ###
+
+```{r}
+res.hcpc$desc.var$test.chi2
+```
+
+### A.2. The description of each cluster by the categories ##
+```{r}
+res.hcpc$desc.var$category
+```
+
+### A.3. The quantitative variables which characterizes the clusters ###
+```{r}
+res.hcpc$desc.var$quanti.var
+```
+
+### A.4. The description of each cluster by the quantitative variables ###
+
+```{r}
+res.hcpc$desc.var$quanti
+```
+
+### B. The description of the clusters by the axes ###
+
+```{r}
+res.hcpc$desc.axes$quanti.var
+res.hcpc$desc.axes$quanti
+```
+### C. The description of the clusters by the individuals ###
+
+```{r}
+res.hcpc$desc.ind$para
+```
+
+
+```{r}
+res.hcpc$desc.ind$dist
+```
+
+#### Characteristic individuals
+```{r}
+
+para1<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$para[[1]]))
+para2<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$para[[2]]))
+para3<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$para[[3]]))
+para4<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$para[[4]]))
+para5<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$para[[5]]))
+para6<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$para[[6]]))
+
+
+dist1<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$dist[[1]]))
+dist2<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$dist[[2]]))
+dist3<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$dist[[3]]))
+dist4<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$dist[[4]]))
+dist5<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$dist[[5]]))
+dist6<-which(rownames(res.pca$ind$coord)%in%names(res.hcpc$desc.ind$dist[[6]]))
+
+
+plot(res.pca,label="none",invisible=c("quali","ind.sup"))  
+plot(res.pca$ind$coord[,1],res.pca$ind$coord[,2],col="grey80",cex=0.5,pch=16)
+points(res.pca$ind$coord[para1,1],res.pca$ind$coord[para1,2],col="blue",cex=2,pch=16)
+points(res.pca$ind$coord[dist1,1],res.pca$ind$coord[dist1,2],col="orange",cex=2,pch=16)
+points(res.pca$ind$coord[para2,1],res.pca$ind$coord[para2,2],col="blue",cex=2,pch=16)
+points(res.pca$ind$coord[dist2,1],res.pca$ind$coord[dist2,2],col="orange",cex=2,pch=16)
+points(res.pca$ind$coord[para3,1],res.pca$ind$coord[para3,2],col="blue",cex=2,pch=16)
+points(res.pca$ind$coord[dist3,1],res.pca$ind$coord[dist3,2],col="orange",cex=2,pch=16)
+points(res.pca$ind$coord[para4,1],res.pca$ind$coord[para4,2],col="blue",cex=2,pch=16)
+points(res.pca$ind$coord[dist4,1],res.pca$ind$coord[dist4,2],col="orange",cex=2,pch=16)
+points(res.pca$ind$coord[para5,1],res.pca$ind$coord[para5,2],col="blue",cex=2,pch=16)
+points(res.pca$ind$coord[dist5,1],res.pca$ind$coord[dist5,2],col="orange",cex=2,pch=16)
+points(res.pca$ind$coord[para6,1],res.pca$ind$coord[para6,2],col="blue",cex=2,pch=16)
+points(res.pca$ind$coord[dist6,1],res.pca$ind$coord[dist6,2],col="orange",cex=2,pch=16)
+
+
+res.hcpc$data.clust[which(rownames(res.hcpc$data.clust)%in%names(res.hcpc$desc.ind$para[[1]])),]
+res.hcpc$data.clust[which(rownames(res.hcpc$data.clust)%in%names(res.hcpc$desc.ind$dist[[1]])),]
+res.hcpc$data.clust[which(rownames(res.hcpc$data.clust)%in%names(res.hcpc$desc.ind$para[[2]])),]
+res.hcpc$data.clust[which(rownames(res.hcpc$data.clust)%in%names(res.hcpc$desc.ind$dist[[2]])),]
+
+
+
+```
+
+
+### Results for the hierarchical tree ###
+
+### The suggested level to cut the tree  ###
+```{r}
+res.hcpc$call$t$nb.clust
+```
+### Within inertias ###
+```{r}
+res.hcpc$call$t$within[1:res.hcpc$call$t$nb.clust]
+```
+### Ratio between within inertias ###
+```{r}
+res.hcpc$call$t$quot[1:res.hcpc$call$t$nb.clust]
+```
+
+### Inertia gain ###
+
+```{r}
+res.hcpc$call$t$inert.gain[1:res.hcpc$call$t$nb.clust]
+```
+
+# Partition quality
+
+```{r}
+(res.hcpc$call$t$within[1]-res.hcpc$call$t$within[res.hcpc$call$t$nb.clust])/res.hcpc$call$t$within[1]
+```

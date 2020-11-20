@@ -697,7 +697,7 @@ levels(df$f.tlenkm)<-paste("f.tlenkm-",levels(df$f.tlenkm),sep="")
 
 ## Variable traveltime
 summary(df$traveltime)
-varaux<-factor(cut(df$traveltime,breaks=c(0,15,40,max(df$traveltime)),include.lowest = T ))
+varaux<-factor(cut(df$traveltime,breaks=c(0,10,20,30,40,max(df$traveltime)),include.lowest = T ))
 summary(varaux)
 df$f.traveltime <- varaux
 levels(df$f.traveltime)<-paste("f.traveltime-",levels(df$f.traveltime),sep="")
@@ -739,7 +739,9 @@ summary(df$AnyToll)
 df$AnyTip<-ifelse(df$Tip_amount<0.01,0,1)
 df$AnyTip<-factor(df$AnyTip,labels=paste("AnyTip",c("No","Yes")))
 
-
+## Variable f.Total_amount
+df$f.Total_amount<-factor(cut(df$Total_amount,breaks=c(0,8,11,18,20,30,40,max(df$Total_amount),na.rm=TRUE),include.lowest = T ))
+levels(df$f.Total_amount)<-paste("f.Total_amount-",levels(df$f.Total_amount),sep="")
 ```
 
 ## Data Quality report (missings/errors/outliers)
@@ -777,7 +779,7 @@ pie(jouts, labels=names(jouts),main = "Pie jouts")
 
 ```{r}
 summary(df)
-vars_dis <- c("VendorID", "Payment_type", "Store_and_fwd_flag",  "RateCodeID", "f.Extra", "f.MTA_tax", "f.Improvement_surcharge", "lpep_pickup_period", "Trip_type", "lpep_pickup_date", "multiouts", "f.espeed", "f.tlenkm", "f.traveltime", "f.distHaversine", "AnyToll", "f.Fare_amount", "f.Passenger_count")
+vars_dis <- c("VendorID", "Payment_type", "Store_and_fwd_flag",  "RateCodeID", "f.Extra", "f.MTA_tax", "f.Improvement_surcharge", "lpep_pickup_period", "Trip_type", "lpep_pickup_date", "multiouts", "f.espeed", "f.tlenkm", "f.traveltime", "f.distHaversine", "AnyToll", "f.Fare_amount", "f.Passenger_count", "f.Total_amount")
 for (i in vars_dis){
   df[,i] <- as.factor(df[,i])
 }
