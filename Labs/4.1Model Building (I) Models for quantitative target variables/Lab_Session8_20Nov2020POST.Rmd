@@ -1,0 +1,160 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+Title   Laboratory Session: Simple Linear Regression
+========================================================
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring web pages (click the **Help** toolbar button for more details on using R Markdown).
+
+When you click the **Knit HTML** button a web page will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+rm(list=ls())
+
+setwd("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/LABORATORY")
+load("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/LABORATORY/Anscombe73raw.RData")
+
+attach(anscombe)  # detach(anscombe)
+summary(anscombe)
+
+# Dataset A
+par(mfrow=c(1,1))
+plot(XA,YA,col="black",pch=19)
+cor(XA,YA)  # Pearson 0.81 satisfactori - relació positiva i intensa
+
+ma <- lm(YA~XA, data = anscombe) # Alt GR 4    Y = b1 + b2X + e = 3.0 + 0.5 X + e  R2 = 66.6%
+summary(ma)
+
+lines(XA,fitted.values(ma),col="black",lwd=3,lty=3)
+text(XA,YA,col="black",labels=row.names(anscombe),adj=1.0)
+
+par(mfrow=c(2,2))
+plot( ma, id.n=0 )
+```
+
+DataSet B
+
+```{r}
+
+par(mfrow=c(1,1))
+plot(XB,YB,col="red",pch=19)
+cor(XB,YB)  # Pearson 0.81 satisfactori - relació positiva i intensa
+mb <- lm( YB~XB ) # Y = b1 + b2X + e = 3.0 + 0.5 X + e  R2 = 66.6%
+summary(mb)
+lines(XB,fitted.values(mb),col="red",lwd=3,lty=3)
+text(XB,YB,col="red",labels=row.names(anscombe),adj=1.0)
+# Default diagnostics
+par(mfrow=c(2,2))
+plot(mb, id.n=0 )   # Patro en els residus yi-fit(yi)=ei  patró
+plot(ma)
+
+mbb <- lm( YB~XB+I(XB^2) ) # Y = b1 + b2X + b3 X^2 + e = -6 + 2.78 X -0.127 X2 + e  R2 = 100%
+summary(mbb)
+par(mfrow=c(2,2))
+plot( mbb, id.n=0 )
+```
+
+DataSet C
+
+```{r}
+par(mfrow=c(1,1))
+plot(XC,YC,col="green",pch=19)
+
+cor(XC,YC)  # Pearson 0.81 satisfactori - relació positiva i intensa
+mc<-lm(YC~XC) # Alt GR 4 # Y = b1 + b2X + e = 3.0 + 0.5 X + e  R2 = 66.6%
+summary(mc)
+lines(XC,fitted.values(mc),col="green",lwd=3,lty=3)
+text(XC,YC,col="green",labels=row.names(anscombe),adj=1.0)
+# Default diagnostics
+par(mfrow=c(2,2))
+plot(mc, id.n = 0)   # Patro en els residus yi-fit(yi)=ei  patró
+
+mc$residuals
+resid(mc)
+rstudent(mc)
+library(car)
+Boxplot(resid(mc),col="green")
+hatvalues(mc) # Hat matrix - Diagonals - leverage / apalancament  limit superior 2p/n = 2*2/11 ~ 0.4
+cooks.distance( mc ) # Influent data Cook's distance large  - rstudent()/(1-hii) 
+# C-H 4/(n-p)= 4/9 ~ 0.4 - Influent data confirmed
+# 
+cooks.distance( mc )
+Boxplot(cooks.distance(mc))
+abline( h=4/9, col=2)
+
+detach(anscombe)
+mcc<-lm(YC~XC,data=anscombe[-3,])
+summary(mcc)
+
+par(mfrow=c(1,1))
+plot(anscombe$XC,anscombe$YC,pch=19,col="green")
+lines(anscombe$XC,fitted.values(mc),col="green",lwd=3,lty=3)
+lines(df$XC,fitted.values(mcc),col="darkgreen",lwd=3,lty=3)
+
+df<-anscombe[-3,]
+mcc<-lm(YC~XC,data=df)   # Y=4+0.35X  R2=100%
+summary(mcc)
+coef(mc)
+coef(mcc)
+
+par(mfrow=c(1,1))
+```
+
+Dataset D
+
+```{r}
+plot( anscombe$XD, anscombe$YD, col="blue",pch=19)
+#cor(XD,YD)  # Pearson 0.81 satisfactori - relació positiva i intensa
+md<-lm(YD~XD,data=anscombe) # Alt GR 4
+summary(md)
+lines(anscombe$XD,fitted.values(md),col="blue",lwd=3,lty=3)
+text(anscombe$XD,anscombe$YD,col="blue",labels=row.names(anscombe),adj=1.0)
+# Default diagnostics
+par(mfrow=c(2,2))
+plot(md,id.n=0)  
+
+resid(md)  # Raw residuals
+rstudent(md)
+rstandard(md)
+hatvalues(md)  # Factor d'apalancament/anclatge o leverage
+# 1/nrow < hii <=1
+
+# Influent data: observacions influents - Cook's distance
+cooks.distance(md)  # Obs 8 
+par(mfrow=c(1,1))
+
+mdd<-lm(YD~XD,data=anscombe[-8,]) # Alt GR 4
+summary(mdd)
+mean(anscombe$YD[-8])
+
+```
+
+All in all
+
+```{r}
+### Prospecció dels jocs de dades A,B,C,D
+par(mfrow=c(2,2))
+anscombe.lmA <- lm(anscombe$YA ~ anscombe$XA, data=anscombe)
+plot(anscombe$XA, anscombe$YA,pch=19,col=1)
+lines(anscombe$XA,anscombe.lmA$fitted.values, col=1, lty=3,lwd=2)
+text(x=anscombe$XA,y=anscombe$YA,labels=row.names(anscombe),adj=1.1, col=1)
+
+anscombe.lmB <- lm(anscombe$YB ~ anscombe$XB, data=anscombe)
+plot(anscombe$XB, anscombe$YB,pch=19,col=2)
+lines(anscombe$XB,anscombe.lmB$fitted.values, col=2, lty=3,lwd=2)
+text(x=anscombe$XB,y=anscombe$YB,labels=row.names(anscombe),adj=1.1, col=2)
+
+anscombe.lmC <- lm(anscombe$YC ~ anscombe$XC, data=anscombe)
+plot(anscombe$XC, anscombe$YC,pch=19,col=3)
+lines(anscombe$XC,anscombe.lmC$fitted.values, col=3, lty=3,lwd=2)
+text(x=anscombe$XC,y=anscombe$YC,labels=row.names(anscombe),adj=1.1, col=3)
+
+anscombe.lmD <- lm(anscombe$YD ~ anscombe$XD, data=anscombe)
+plot(anscombe$XD, anscombe$YD,pch=19,col=4)
+lines(anscombe$XD,anscombe.lmD$fitted.values, col=4, lty=3,lwd=2)
+text(x=anscombe$XD,y=anscombe$YD,labels=row.names(anscombe),adj=1.1, col=4)
+
+
+```

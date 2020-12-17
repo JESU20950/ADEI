@@ -1,0 +1,310 @@
+---
+title: "Session 10: NY Cabs Data - Multiple Regression"
+author: "Lidia Montero"
+date: "December 4th, 2020"
+output: 
+  html_document: 
+    toc: true
+    toc_depth: 3
+    number_sections: true
+editor_options: 
+  chunk_output_type: console
+---
+
+# Introduction
+
+## Data Description
+
+Description http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml
+Data Dictionary - SHL Trip Records -This data dictionary describes SHL trip data in visit http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml:
+
+  - VendorID	A code indicating the LPEP provider that provided the record.      1= Creative Mobile Technologies, LLC; 2= VeriFone Inc.   
+  - lpep_pickup_datetime	The date and time when the meter was engaged.    
+  - lpep_dropoff_datetime	The date and time when the meter was disengaged.     
+  - Passenger_count	The number of passengers in the vehicle. This is a driver-entered value.    -  Trip_distance 	The elapsed trip distance in miles reported by the taximeter.   
+  - Pickup_longitude	 Longitude where the meter was engaged.   
+  - Pickup_latitude	Latitude where the meter was engaged.   
+  - RateCodeID	The final rate code in effect at the end of the trip.  1= Standard rate  2=JFK 3=Newark 4=Nassau or Westchester 5=Negotiated fare 6=Group ride   
+  - Store_and_fwd_flag	This flag indicates whether the trip record was held in vehicle memory before sending to the vendor, aka "store and forward," because the vehicle did not have a connection to the server: Y= store and forward trip  N= not a store and forward trip   
+  - Dropoff_longitude	Longitude where the meter was timed off.   
+  - Dropoff_ latitude	Latitude where the meter was timed off.   
+  - Payment_type	A numeric code signifying how the passenger paid for the trip.  1= Credit card 2= Cash 3= No charge 4= Dispute 5= Unknown 6= Voided trip   
+  - Fare_amount	The time-and-distance fare calculated by the meter.   
+  - Extra	 Miscellaneous extras and surcharges.  Currently, this only includes the $0.50 and $1 rush hour and overnight charges. 
+  - MTA_tax	 $0.50 MTA tax that is automatically triggered dfd on the metered rate in use.    - Improvement_surcharge	$0.30 improvement surcharge assessed on hailed trips at the flag   drop. The improvement surcharge began being levied in 2015.   
+  - Tip_amount	 This field is automatically populated for credit card tips. Cash tips are not included.   
+  - Tolls_amount	Total amount of all tolls paid in trip.    
+  - Total_amount	The total amount charged to passengers. Does not include cash tips.   
+  - Trip_type	A code indicating whether the trip was a street-hail or a dispatch that is automatically assigned dfd on the metered rate in use but can be altered by the driver. 
+1= Street-hail 2= Dispatch  
+
+## Load Required Packages
+
+```{r, echo=FALSE, include=FALSE}
+rm(list=ls())
+# Load Required Packages: to be increased over the course
+
+requiredPackages <- c("effects","FactoMineR","car","lmtest", "factoextra","RColorBrewer","ggplot2","moments")
+missingPackages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
+
+if(length(missingPackages)) install.packages(missingPackages)
+lapply(requiredPackages, require, character.only = TRUE)
+
+```
+
+# Statistical Modelling
+
+## Load Data after Cleaning and EDA
+
+```{r}
+# green_tripdata_2016-01
+setwd("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS")
+load("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS/MyTaxi5000Clean.RData")
+summary(df)
+```
+
+# Multiple Linear Regression issues
+
+Explanatory variables numeric only
+
+*Target numeric Total_amount*
+
+```{r}
+names(df)
+vars_con<-names(df)[c(3:15,17:21)];vars_con
+vars_dis<-names(df)[c(1,2,16,22:36)];vars_dis
+vars_res<-names(df)[c(15,23)]
+
+vars_cexp<-vars_con[c(5:12,14:18)];vars_cexp
+
+# Calculation of Pearson/Spearman correlation
+
+# Y Normally distributed?
+
+skewness(df$Total_amount)  # Normal data should 0 - Right skewed data is present
+kurtosis(df$Total_amount)  # Normal data should 3 - 5.35 >> 3
+
+mm<-mean(df$Total_amount);ss<-sd(df$Total_amount);mm;ss
+hist(df$Total_amount,30,freq=F)
+curve(dnorm(x,mean=mm,sd=ss),col="blue",lwd=2,lty=3, add=T)
+
+shapiro.test(df$Total_amount)  # H0 Rejected -> Non-normally distributed data
+
+round(cor(df[,c("Total_amount",vars_cexp)], method="spearman"),dig=2)  # Non parametric
+
+# Or using condes()
+res.con <- condes(df,num.var=which(names(df)=="Total_amount"))
+res.con$quanti
+res.con$quali
+res.con$category
+summary(df[,vars_cexp])
+```
+
+```{r}
+
+# Initial model: Take the most correlated variables - Any of group distances, fare_amount, tip_amount, tolls_amount, traveltime, espeed
+# 
+# If few explanatory variables are available -> Take all of them
+# 
+vars_cexp
+cor(df$l1dist,df$tlenkm)
+
+m19 <- lm( Total_amount~., data=df[,c("Total_amount",vars_cexp)])
+summary(m19)
+vif(m19)  # Check association between explanatory vars
+Anova(m19)  # Efectes nets
+
+# 
+m20 <- lm( Total_amount~ tlenkm  + Extra + Tip_amount + Tolls_amount + improvement_surcharge, data=df[,c("Total_amount",vars_cexp)]) # Should Fare_amount be retained?
+summary(m20)
+vif(m20)  # Check association between explanatory vars
+Anova(m20)  # Efectes nets
+
+# Cribratge - Remove explanatory variables
+
+m21 <- step( m20, k=log(nrow(df)) )  # BIC - Bayesian Information Criteria - Schwarz - Keep explicability and reduce complexity - Goal: Minimum BIC
+vif(m21)
+
+summary(m21)
+anova(m21,m20) # H0: m21 = m20  - H0 accepted pval > 0.05 (not too low)
+vif(m21)
+marginalModelPlots(m21)
+
+#Useful to try transformations: log() transformation
+#Avoid correlated explanatory variables 
+
+m22<-lm(Total_amount ~ Extra + Tip_amount + 
+    Tolls_amount + improvement_surcharge + poly(tlenkm,3),data=df)
+summary(m22)
+Anova(m22)
+anova(m22,m21) # H0: m21 = m22  - H0 can not be tested  - Not nested
+vif(m22)
+marginalModelPlots(m22)
+
+#- At this point multicollinearity is removed ....
+
+# Example: m22a
+m22a<-lm(Total_amount ~ Extra + MTA_tax + Tip_amount + 
+    Tolls_amount + improvement_surcharge + tlenkm,data=df)
+summary(m22a)
+marginalModelPlots(m22a)
+
+# Total_amount related to Fare_amount and tlenkm, but MTA_tax and improvement_surcharge can not be considered together
+
+# R2 dels models i decidir  ....
+
+m23 <- 
+
+```
+
+## Diagnostics
+
+```{r}
+par(mfrow=c(2,2))
+plot(m23, id.n=0 )
+par(mfrow=c(1,1))
+
+m24<-lm(log(Total_amount) ~ Extra + Tip_amount + Tolls_amount + improvement_surcharge + espeed + poly(tlenkm,2), data=df)
+summary(m24)
+Anova(m24)
+# May I use anova( m23,m24 )?
+BIC(m23,m22,m24) # H0: m23 = m24  - Not possible to test
+vif(m24)
+marginalModelPlots(m24)
+
+m25<-lm(log(Total_amount) ~ Extra + Tip_amount + Tolls_amount + improvement_surcharge + espeed + log(tlenkm) ,data=df)
+summary(m25)
+Anova(m25)
+# May I use anova( m23,m24 )? Check wether nested or not?
+BIC(m23,m24,m25) # H0: m23 = m24  - Not possible to test
+vif(m25)
+marginalModelPlots(m25)
+
+# Entendre el model
+library(effects)
+plot(allEffects(m25))
+
+par(mfrow=c(2,2))
+plot(m25, id.n=0 )
+par(mfrow=c(1,1))
+
+summary(resid(m25))
+sel1<-Boxplot(rstudent(m25));sel1 # sel1 already contains row numbers
+# ll1<-which(row.names(df) %in% names(rstudent(m25)[sel1]));ll1
+sel2<-which(hatvalues(m25)>6*length(m25$coefficients)/nrow(df));sel2;length(sel2) # sel2 contains row names
+ll2<-which(row.names(df) %in% names(hatvalues(m25)[sel2]));ll2
+sel3<-which(abs(cooks.distance(m25))>4/(nrow(df)-length(m25$coefficients)));sel3;length(sel3)
+ll3<-which(row.names(df) %in% names(cooks.distance(m25)[sel3]));ll3
+# sel4<-Boxplot(cooks.distance(m25));sel4  # sel4 already contains row numbers
+sel3<-which((cooks.distance(m25))>0.1);sel3;length(sel3)# sel3 contains row names
+ll3<-which(row.names(df) %in% names(cooks.distance(m25)[sel3]));ll3
+
+influencePlot(m25,id=list(method="noteworthy", n=5, cex=0.5))
+with(df,tapply(Total_amount,RateCodeID,summary))
+
+library(MASS)
+boxcox(Total_amount ~ Extra + Tip_amount + 
+    Tolls_amount + improvement_surcharge + tlenkm,data=df)
+
+m26<-lm(sqrt(Total_amount) ~ Extra + Tip_amount + Tolls_amount + improvement_surcharge + espeed + poly(tlenkm,3) ,data=df)
+summary(m26)
+
+par(mfrow=c(2,2))
+plot( m26, id.n=0 )
+par(mfrow=c(1,1))
+```
+
+# Using factors as explanatory variables
+## Try to change numerical each regressor by its discretized factor
+
+```{r}
+
+m30<-lm(log(Total_amount) ~  Extra + Tip_amount + Tolls_amount + improvement_surcharge + espeed + log(tlenkm)  ,data=df)
+Anova(m30)
+vif(m30)
+
+vars_enum<-c("Extra","Tip_amount","Tolls_amount","improvement_surcharge","tlenkm")
+vars_edis<-c("VendorID","RateCodeID","Payment_type","period")
+
+df$f.extra <- factor(df$Extra)
+
+m31<-lm(log(Total_amount) ~ f.extra + Tip_amount + Tolls_amount + improvement_surcharge + espeed + log(tlenkm)  ,data=df)
+
+anova(m30, m31)  # NOT POSSIBLE
+BIC(m30,m31)
+
+m32<-lm(log(Total_amount) ~ f.extra + Tip_amount + f.tolls+ improvement_surcharge + espeed + log(tlenkm)  ,data=df)
+BIC(m30,m31,m32)
+
+m33<-lm(log(Total_amount) ~ f.extra + Tip_amount + f.tolls+ f.scharge + espeed + log(tlenkm)  ,data=df)
+BIC(m30,m31,m32,m33)
+
+m34<-lm(log(Total_amount) ~ f.extra + Tip_amount + f.tolls+ f.scharge + f.speed + log(tlenkm)  ,data=df)
+BIC(m30,m31,m32,m33,m34)
+
+m35 <- .....
+
+Anova(m35)
+summary(m35)
+model.matrix(m35)[1:12,]
+
+par(mfrow=c(2,2))
+plot( m35, id.n=0 )
+par(mfrow=c(1,1))
+
+influencePlot( m35, id=c(list="noteworthy",n=5))
+residualPlots( m35 )
+marginalModelPlots( m35 )
+
+ll1<-Boxplot(rstudent(m35));ll1
+# ll1<-which(row.names(df) %in% names(rstudent(m25)[sel1]));ll1
+df[ll1,]
+ll4 <- Boxplot( cooks.distance( m35 ));ll4
+ll4<-c(649, 4088)
+dfred<-df[-ll4,]
+
+# Outliers dels residus - Verticals - Cal suprimir-los: el model no pot explicar-los
+
+m36<-lm(log(Total_amount) ~ f.extra + Tip_amount + f.tolls+ f.scharge + f.speed + log(tlenkm)  ,data=dfred)
+summary(m36)
+Anova(m36)
+vif(m36)
+
+```
+
+## Adding factors: main effects
+
+```{r}
+names(df)
+m40<-lm(log(Total_amount) ~ Tip_amount + log(tlenkm)+ f.tolls+ f.scharge + f.speed + f.extra + RateCodeID + VendorID + Payment_type+period ,data=df)
+
+summary(m40)
+Anova( m40 )
+
+m41<-lm(log(Total_amount) ~ Tip_amount + log(tlenkm)+ f.tolls + f.speed + f.extra + RateCodeID + Payment_type+period ,data=df)
+
+anova(m41, m40)
+```
+
+
+```{r}
+# Interactions
+# 
+m50<-lm(log(Total_amount) ~ (Tip_amount + log(tlenkm))*(f.tolls + f.speed + f.extra + RateCodeID + Payment_type+period) ,data=df)
+
+m51<-step( m50, k=log(nrow(df)))
+Anova(m51)
+summary( m51 )
+
+
+m55<- ....
+
+ll1<-Boxplot(rstudent(m55));ll1
+sel2<-which(hatvalues(m55)>5*length(m55$coefficients)/nrow(df));sel2;length(sel2)
+ll2<-which(row.names(df) %in% names(hatvalues(m25)[sel2]));ll2
+sel3<-which(cooks.distance(m55)> 0.5 );sel3;length(sel3)
+ll3<-which(row.names(df) %in% names(cooks.distance(m55)[sel3]));ll3
+
+
+```
+

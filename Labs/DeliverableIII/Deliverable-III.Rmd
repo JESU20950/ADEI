@@ -1,0 +1,335 @@
+---
+title: "Deliverable-III"
+output:
+  word_document:
+    toc: no
+    toc_depth: '4'
+  pdf_document:
+    toc: no
+    toc_depth: '4'
+editor_options: 
+  chunk_output_type: inline
+---
+# Load Required Packages: to be increased over the course
+
+```{r}
+# Load Required Packages: to be increased over the course
+options(contrasts=c("contr.treatment","contr.treatment"))
+
+requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","ggpubr", "corrplot", "moments")
+missingPackages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
+
+if(length(missingPackages)) install.packages(missingPackages)
+lapply(requiredPackages, require, character.only = TRUE)
+
+```
+
+# Statistical Modelling
+
+## Load Processed data
+
+```{r, echo=FALSE, results='FALSE'}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+#setwd("C:/Users/carle/Desktop/ADEI2")
+#filepath<-"C:/Users/carle/Desktop/ADEI2/"
+
+
+setwd("~/Desktop/ADEI/Labs/DeliverableIII")
+df <- read.table("Deliverable1.csv",header=T, sep=",");
+
+```
+
+## Modify Data
+```{r}
+vars_dis <- c("VendorID", "Payment_type", "Store_and_fwd_flag",  "RateCodeID", "f.Extra", "f.MTA_tax", "f.Improvement_surcharge", "lpep_pickup_period", "Trip_type", "lpep_pickup_date", "multiouts", "f.espeed", "f.tlenkm", "f.traveltime", "f.distHaversine", "AnyToll", "f.Fare_amount", "f.Passenger_count", "f.Total_amount")
+
+vars_con <- c( "Passenger_count", "tlenkm", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "espeed", "Tip_amount", "Tolls_amount", "lpep_pickup_time", "traveltime", "distHaversine")
+for( i in vars_dis){
+  df[,i] <- as.factor(df[,i])
+}
+
+vars_res <- c("AnyTip", "Total_amount")
+
+d1 <- dim(df)[1]
+d2 <- dim(df)[2]
+df[,d2-1] <- as.factor(df[,d2-1])
+vars_cexp<-c("Passenger_count", "tlenkm", "Fare_amount", "espeed", "Tip_amount", "Tolls_amount", "lpep_pickup_time", "traveltime", "distHaversine")
+
+```
+
+
+# Multiple Linear Regression issues
+
+Explanatory variables numeric only
+
+*Target numeric Total_amount*
+
+Normalización
+
+```{r}
+hist(df$Total_amount, 70, freq=F)
+mn <- mean(df$Total_amount); ss <- sd(df$Total_amount)
+curve(dnorm(x, mean = mn,sd= ss), lwd=2, lty=3, add=T)
+```
+Antes de poder hacer la modelización hay que mirar si la variable respuesta sigue una distribución normal. Para realizar la comprobación utilizamos diferentes indicadores.
+Si vemos el histograma del Total amount junto a la correcta distribución normal, vemos que el los histogramas no se solapan, lo que significa que tenemos que normalizar la variable.
+ 
+```{r}
+shapiro.test(df$Total_amount)
+```
+Si realizamos el test de normalidad Shapiro-Wilk, observamos que la H0 puede ser rechazada. Lo que significa que los datos no siguen una distribución normal.
+
+
+
+```{r}
+skewness(df$Total_amount)  # Normal data should 0 - Right skewed data is present
+```
+Si realizamos un test de simetria como Skewness, vemos que nos devuelve un valor diferente a 0. Por lo tanto, los datos son asimetrico y como consequencia no siguen una distribución normal. También podemos ver que el valor es superior a 0 por lo tanto los datos son right-skewed.
+
+```{r}
+kurtosis(df$Total_amount)  # Normal data should 3 - 5.35 >> 3
+```
+
+Si computamos la curtosis de la variable Total amount, observamos que es superior a 3, lo que significa que no sigue una distribución normal. Tras ver todos estos argumentos, vemos que los datos no siguen una distribución normal.
+Es por eso que el metodo más apropiado para calcular la correlación deba ser a partir de Spearman.
+
+```{r}
+round(cor(df[,c("Total_amount",vars_cexp)], method="spearman"),dig=2) 
+```
+
+Si vemos los resultados, observamos que la distancia recorrida, la tarifa abonada, la duración del viaje y la distancia Haversine son las variables más correlacionadas con el target numérico, Total amount.
+```{r}
+round(cor(df[,c("Total_amount",vars_cexp)], method="pearson"),dig=2)
+```
+A pesar de que no podemos calcular la correlación entre las variables númerica a partir de la Pearson, ya que no siguen una distribución normal, vemos que los resultados son más o menos similares. 
+
+Para el modelo inicial podríamos elegir aquellas variables más correlacionadas. A pesar de todo, como tenemos pocas variables explicativas, decidímos coger todas las variables explicativas.
+
+```{r}
+m <- lm( Total_amount~., data=df[,c("Total_amount",vars_cexp)])
+summary(m)
+Anova(m) 
+```
+Como podemos ver el modelo tiene una explicatividad del 96% de la variabilidad del target. A pesar de todo, hay variables como el passenger count y el traveltime que no son significativas ya que tienen una proporcion de la distribución t inferior a 0.05.
+
+
+```{r}
+vif(m)  # Check association between explanatory vars
+```
+A partir de al variance inflation factors vemos la asociacion entre las variables explicativas. Podemos observar que las variables tlenkm, Fare amount y la distancia Haversine están muy correlacionadas. También podemos ver que la distancia fare amount y la distancia Haversine tienen un valor similar de inflacción 
+
+
+Cribratge - Remove explanatory variables
+
+BIC - Bayesian Information Criteria - Schwarz
+```{r}
+m <- step( m, k=log(nrow(df)) )
+```
+Como podemos ver que si aplicamos el Stepwise Algorithm Akaike segun el Akaike information criterion (AIC), vemos que nos elimina las variables explicativas traveltime, Passenger_count y lpep_pickup_time. La calidad del criterio de AIC se nos queda en 6439.54. 
+
+```{r}
+# 
+m <- lm( Total_amount ~ tlenkm + Fare_amount + espeed + Tip_amount + Tolls_amount + 
+    lpep_pickup_time + distHaversine, data=df[,c("Total_amount",vars_cexp)])
+Anova(m)  
+```
+Tras haber analizado todas las variables que no aportaban mucho en el modelo decidimos eliminar las variables passenger count y el traveltime de nuestro modelo ya que era las dos primeras variables que elimina el vif y las rechazadas por la hipotesi nula. Podriamos eliminar la variable Fare_amount, ya que practicamente la misma que nuestro target, sin embargo decidimos no eliminarla.
+
+```{r}
+#marginalModelPlots(m)
+```
+
+En la imagen superior podemos ver los resultados que obtenemos del modelo de regresión. Como vemos la distancia recorrida en km y la distancia de Haversine siguen una regresion lineal perfecta.
+
+Transformations
+
+```{r}
+m2 <-lm(Total_amount ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
+    lpep_pickup_time + distHaversine,data=df)
+summary(m2)
+Anova(m2) 
+vif(m2)
+#marginalModelPlots(m2)
+```
+Si aplicamos la computacion orthogonal polinomial de grado 2 a la distancia recorrida del taxi, vemos que el resultado es parecido. Tiene la misma explicatividad y la linea azul, linea de los datos, se ajusta bastante a la linea roja, linea que representa el modelo.
+
+
+
+## Diagnostics
+
+```{r}
+par(mfrow=c(2,2))
+plot(m, id.n=0)
+par(mfrow=c(1,1))
+```
+Si observamos los residuos encontramos algun valor negativo y varios valores que fuera de la linea residual. Además encontramos que los residuos no muestrán una tendencia normalizada. Una de las modificaciones que hicimos es modificar la escala de la variable target a logaritmica. 
+
+```{r}
+l <- which(df$Total_amount == 0 )
+df[l,'Total_amount'] <- 0.0001
+m3 <- lm( log(Total_amount) ~ poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
+    lpep_pickup_time + distHaversine, data=df)
+summary(m3)
+```
+
+Como podemos ver, tras modificar realizar la pertinente modificacion, nos encontramos que la hiptesi nula de la variable toll amount puede ser rechaza. Como consequencia provamos con eliminar de la formula. También hemos decidido eliminar la variable distHaversine de la modelización ya que a pesar de que su valor sea inferior a 0.5 seguro que mejora el modelo.
+
+```{r}
+m3 <- lm( log(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + 
+    lpep_pickup_time, data=df)
+summary(m3)
+Anova(m3) 
+vif(m3)
+#marginalModelPlots(m3)
+```
+
+Tras realizar las mejoras vemos que el modelo reduce el residual estandard deviation. De manera que mejora el modelo.
+
+```{r}
+BIC(m,m2,m3)
+```
+Si calculamos Akaike en los modelos, vemos también que el último modelo es mejor en comparación a los otros.
+A pesar de que el tercer modelo es el mejor, no creimos oportuno elegirlo como representatne ya que la distancia en km tiene una relación inversamente proporcional respecto al Total amount. Es por eso que seguimos trabajando con el primer modelo.
+
+```{r}
+library(MASS)
+par(mfrow=c(1,2))
+boxcox(Total_amount ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
+    lpep_pickup_time + distHaversine,data=df)
+boxcox(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
+    lpep_pickup_time + distHaversine,data=df)
+par(mfrow=c(1,1))
+```
+Si aplicammos una Box-Cox power transformation a nuestros datos, vemos que con el primer modelo tiene un parametro inferior a 1, lo que sugiere que debemos aplicar alguna transformación, como una raiz cuadrada, a nuestra variable objetivo.
+
+
+
+```{r}
+m4<-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
+    lpep_pickup_time + distHaversine,data=df)
+summary(m4)
+Anova(m4) 
+vif(m4)
+par(mfrow=c(2,2))
+plot( m4, id.n=0 )
+par(mfrow=c(1,1))
+```
+
+
+```{r}
+summary(resid(m4))
+sel1<-Boxplot(rstudent(m4));sel1 # sel1 already contains row numbers
+# ll1<-which(row.names(df) %in% names(rstudent(m25)[sel1]));ll1
+sel2<-which(hatvalues(m4)>6*length(m4$coefficients)/nrow(df));sel2;length(sel2) # sel2 contains row names
+ll2<-which(row.names(df) %in% names(hatvalues(m4)[sel2]));ll2
+sel3<-which(abs(cooks.distance(m4))>4/(nrow(df)-length(m4$coefficients)));sel3;length(sel3)
+ll3<-which(row.names(df) %in% names(cooks.distance(m4)[sel3]));ll3
+# sel4<-Boxplot(cooks.distance(m25));sel4  # sel4 already contains row numbers
+sel3<-which((cooks.distance(m4))>0.1);sel3;length(sel3)# sel3 contains row names
+ll3<-which(row.names(df) %in% names(cooks.distance(m4)[sel3]));ll3
+
+influencePlot(m4,id=list(method="noteworthy", n=5, cex=0.5))
+with(df,tapply(Total_amount,RateCodeID,summary))
+```
+
+
+# Using factors as explanatory variables
+## Try to change numerical each regressor by its discretized factor
+
+```{r}
+
+m30<-lm(log(Total_amount) ~  Extra + Tip_amount + Tolls_amount + improvement_surcharge + espeed + log(tlenkm)  ,data=df)
+Anova(m30)
+vif(m30)
+
+vars_enum<-c("Extra","Tip_amount","Tolls_amount","improvement_surcharge","tlenkm")
+vars_edis<-c("VendorID","RateCodeID","Payment_type","period")
+
+df$f.extra <- factor(df$Extra)
+
+m31<-lm(log(Total_amount) ~ f.extra + Tip_amount + Tolls_amount + improvement_surcharge + espeed + log(tlenkm)  ,data=df)
+
+anova(m30, m31)  # NOT POSSIBLE
+BIC(m30,m31)
+
+m32<-lm(log(Total_amount) ~ f.extra + Tip_amount + f.tolls+ improvement_surcharge + espeed + log(tlenkm)  ,data=df)
+BIC(m30,m31,m32)
+
+m33<-lm(log(Total_amount) ~ f.extra + Tip_amount + f.tolls+ f.scharge + espeed + log(tlenkm)  ,data=df)
+BIC(m30,m31,m32,m33)
+
+m34<-lm(log(Total_amount) ~ f.extra + Tip_amount + f.tolls+ f.scharge + f.speed + log(tlenkm)  ,data=df)
+BIC(m30,m31,m32,m33,m34)
+
+m35 <- .....
+
+Anova(m35)
+summary(m35)
+model.matrix(m35)[1:12,]
+
+par(mfrow=c(2,2))
+plot( m35, id.n=0 )
+par(mfrow=c(1,1))
+
+influencePlot( m35, id=c(list="noteworthy",n=5))
+residualPlots( m35 )
+marginalModelPlots( m35 )
+
+ll1<-Boxplot(rstudent(m35));ll1
+# ll1<-which(row.names(df) %in% names(rstudent(m25)[sel1]));ll1
+df[ll1,]
+ll4 <- Boxplot( cooks.distance( m35 ));ll4
+ll4<-c(649, 4088)
+dfred<-df[-ll4,]
+
+# Outliers dels residus - Verticals - Cal suprimir-los: el model no pot explicar-los
+
+m36<-lm(log(Total_amount) ~ f.extra + Tip_amount + f.tolls+ f.scharge + f.speed + log(tlenkm)  ,data=dfred)
+summary(m36)
+Anova(m36)
+vif(m36)
+
+```
+
+## Adding factors: main effects
+
+```{r}
+names(df)
+m40<-lm(log(Total_amount) ~ Tip_amount + log(tlenkm)+ f.tolls+ f.scharge + f.speed + f.extra + RateCodeID + VendorID + Payment_type+period ,data=df)
+
+summary(m40)
+Anova( m40 )
+
+m41<-lm(log(Total_amount) ~ Tip_amount + log(tlenkm)+ f.tolls + f.speed + f.extra + RateCodeID + Payment_type+period ,data=df)
+
+anova(m41, m40)
+```
+
+
+```{r}
+# Interactions
+# 
+m50<-lm(log(Total_amount) ~ (Tip_amount + log(tlenkm))*(f.tolls + f.speed + f.extra + RateCodeID + Payment_type+period) ,data=df)
+
+m51<-step( m50, k=log(nrow(df)))
+Anova(m51)
+summary( m51 )
+
+
+m55<- ....
+
+ll1<-Boxplot(rstudent(m55));ll1
+sel2<-which(hatvalues(m55)>5*length(m55$coefficients)/nrow(df));sel2;length(sel2)
+ll2<-which(row.names(df) %in% names(hatvalues(m25)[sel2]));ll2
+sel3<-which(cooks.distance(m55)> 0.5 );sel3;length(sel3)
+ll3<-which(row.names(df) %in% names(cooks.distance(m55)[sel3]));ll3
+
+
+```
+```
+

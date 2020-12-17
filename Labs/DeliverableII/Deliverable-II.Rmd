@@ -6,6 +6,8 @@ output:
   pdf_document:
     toc: no
     toc_depth: '4'
+  editor_options: 
+    chunk_output_type: inline
 ---
 # Load Required Packages: to be increased over the course
 
@@ -150,7 +152,7 @@ plot(res.pca,choix=c("ind"),invisible = c("ind", "var", "quali"), axes=c(3,4))
 ```{r}
 res.pca<-PCA(df[,c(1:10,20:(d2-2),d2)],quali.sup=c(1:10),quanti.sup=c(13:16,24), ncp=4, graph= FALSE)
 res.hcpc<-HCPC(res.pca,nb.clust = -1,order=TRUE)
-df$hcpck<-res.hcpc$data.clust$clust
+hcpck<-res.hcpc$data.clust$clust
 ```
 Viendo la inertia gain (pérdida importante de ir entre n clusters a n+1 clusters) y aplicando Kaiser Rule podemos ver que el número de clusters óptimo es 6.
 
@@ -381,11 +383,13 @@ res.cat$category
 
 # Confusion table
 ```{r}
-df$hcpck<-factor(df$hcpck,labels=paste("kHP-",1:6))
+hcpck<-factor(hcpck,labels=paste("kHP-",1:6))
 df$claKM<-factor(df$claKM,levels=c(3,6,2,1,5,4),labels=c("kKM-3","kKM-6","kKM-2","kKM-1","kKM-5","kKM-4"))
-tt<-table(df$hcpck,df$claKM)
+tt<-table(hcpck,df$claKM)
 tt
 sum(diag(tt)/sum(tt))
+(2161+263+0+50)/(661+2161+295+17+263+6+12+9+728+462+44+205+50+6+81)
+df$claKM <- NA
 ```
 
 
