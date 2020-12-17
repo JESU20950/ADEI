@@ -1,13 +1,17 @@
 ---
 output:
+  html_document:
+    toc: no
+    toc_depth: '4'
+    df_print: paged
   word_document:
     toc: no
     toc_depth: '4'
+  editor_options:
+    chunk_output_type: inline
   pdf_document:
     toc: no
     toc_depth: '4'
-  editor_options: 
-    chunk_output_type: inline
 ---
 # Load Required Packages: to be increased over the course
 
@@ -15,7 +19,7 @@ output:
 # Load Required Packages: to be increased over the course
 options(contrasts=c("contr.treatment","contr.treatment"))
 
-requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","ggpubr", "corrplot")
+requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","ggpubr", "corrplot", "moments","rmarkdown", "tinytex")
 missingPackages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
 
 if(length(missingPackages)) install.packages(missingPackages)

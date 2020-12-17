@@ -1,0 +1,199 @@
+---
+title: "QUIZ1 ADEI_1920Quiz2"
+author: "Lidia Montero"
+date: "December 20th, 2019"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+
+# List of Questions
+
+The data set to perform this exercise belongs to the stata website (http://www.stata.com/texts/eacsap/), there are 4596 individual observations of US air fares documented by Jeffrey M. Wooldridge, 2000 "Airfare" Instructional Stata datasets for econometrics”, Boston College Department of Economics. The file contains the price paid by passengers for internal flights in 48 US states between 1997 and 2000. The original response variable is fare. The key explanatory variable is the market share of the majority company (bmktshr or concen), the distance should also be included in the model and the daily demand (passen). You only have to work in this exercise with the data for the year 2000. List of variables:
+
+  - year:	1997, 1998, 1999, 2000
+  - origin:	flight's origin
+  - destin: flight's destination
+  - id:	route identifier
+  - dist:	distance, in miles
+  - passen:	avg. passengers per day
+  - fare:	avg. one-way fare, $
+  - bmktshr/concen:	fraction market, biggest carrier
+  - Some additional variables not rellevant for the exercise
+
+**Firstly, load dataset, select subsample and check available variables.**
+```{r}
+rm(list=ls())
+#load("D:/DOCENCIA/FIB-ADEI/EXAMENS/1920Q1/01- Airfare-raw.RData")
+summary(air)
+sel<-which(air$y00==1)
+length(sel)
+df<-air[sel,]
+names(df)
+summary(df)  # NA (Not Available) free
+
+```
+
+**1.	Determine if the response variable (fare) has an acceptably normal distribution..**
+
+```{r}
+#Numerical Description
+
+summary(df$fare)
+# Percentiles
+seq(0,1,0.1)
+quantile(df$fare,seq(0,1,0.1))
+
+# Graphics
+
+me<-mean(df$fare);sd<-sd(df$fare);me;sd
+hist(df$fare,main="Histograma Tarifa - Relativo",col="cyan",20,freq=FALSE) # Proportion per bin
+curve(add=T,col="red",lwd=2,dnorm(x,me,sd))
+
+#  Shapiro-Wilk Test
+shapiro.test(df$fare)  # H0 Rejected (p value << 0.05)
+```
+
+Graphic output show some missfit to normal curve. Numerical output indicates a median (178) less than the mean of fare (188), so assymetry is present, which it is not the case in normal data. Additionally, Shapiro-Wilk test for normality shows a pvalue <2.2e-16 lower than the common acceptance cut-off (0.05), thus normality has to be rejected. All arguments point against normality for fare data.
+
+
+**2.	Make a rough assessment of descriptive statistics for variables fare), market share of the largest operator (bmktshr/concen), distance (dist) and number of daily passengers (passen). Indicate by exploration of the data which are apparently the variables most associated with the response variable (use only the indicated variables).**
+
+```{r}
+names(df)
+par(mfrow=c(2,2))
+boxplot(df$fare,main="Fare")
+boxplot(df$dist,main="distance")
+boxplot(df$passen,main="passenger")
+boxplot(df$bmktshr,main="market share")
+par(mfrow=c(1,1))
+summary(df[,c(7,5:6,8)])
+plot(df[,c(7,5:6,8)])
+cor(df[,c(7,5:6,8)],method="spearman")
+```
+
+Fare ranges between 62 and 522, having a 188 mean value and 178 median value. 50% of observations lie between 132 and 233. Right tailed distribution that show outliers.Threshold for severe outliers is 233+3*101=536$, so above sample maximum.
+
+Distance ranges between 95 and 2724km, having a 989km mean value and 861km median value. 50% of observations lie between 505 and 1304km. Right tailed distribution that show mild outliers.
+
+Passenger per day ranges between 2 and 8497pax, having a 650 pax mean value and 378pax median value. 50% of observations lie between 238 and 759. Right tailed distribution that show many outliers, but only those flights above 759+3*521=2322 pax per day are severe outliers and thus unusual data.
+
+Market share ranges between 18% and 100%, having a 60% mean value and 59% median value. 50% of observations lie between 46% and 74%. No outliers are present and data distribution is symmetric.
+
+**3.	Define a polythomic factor f.concen for the covariate of the market share of the main operator (concen) according to its quartiles and argue if the average rate depends on the level of concentration of the path. Statistically justify the answer.**
+
+```{r}
+quantile(df$concen)
+df$f.concen<-cut(df$concen,breaks=quantile(df$concen),include.lowest=T)
+summary(df$f.concen)
+library(car)
+Boxplot(df$fare~df$f.concen,col=heat.colors(4))  # 
+kruskal.test(df$fare~df$f.concen)
+conres<-condes(df,7)
+conres$quanti
+conres$category
+```
+
+Graphics for fare in groups show slight differences in medians, more remarkable in the interquartilar range. All concentration groups highlight outliers for fare. According to the non-parametric Kruskal-Wallis test fare distribution across concentration groups can not be considered homogeneous, since H0 is rejected (3.43e-08).
+
+**4.	Calculate the linear regression model that explains the fare from the distance of the path: interpret the regression line and assess its quality. What is the percentage of the rate variability that is explained by the length of the air route? Do you think it is necessary to introduce a quadratic term in the equation that relates the fare to the length of the air route?.**
+
+```{r}
+m1<-lm(fare~dist,data=df)  # y=113.5+0.075x
+summary(m1)
+scatterplot(fare~dist,data=df,smooth=F)
+m2<-lm(fare~poly(dist,2),data=df)
+summary(m2)
+```
+
+Model m1 is not good, since it only explains  36% of the target's variability. According to the default table with null coefficient tests dist is a significant variable. Model equation is fare=113.5+0.0752dist. Scatterplot output shows that an increasing pattern for fare holds when distance increases (common sense also agrees!). Adding a quadratic term barely improves the model by 0.3% explicability, although the second order term parameter is significantly different to 0 (thus useful) at the 5% confidence level, but it would accepted at the 1% confidence level.
+
+**5.	Make a suitable transformation for the target and the length of the air route. After controlling for the length of the path, indicate whether the additive effect of the monopoly factor on the route is statistically significant.**
+
+```{r}
+
+library(MASS)
+boxcox(fare~dist,data=df)
+m3<-lm(sqrt(fare)~dist,data=df)
+m3<-lm(sqrt(fare)~sqrt(dist),data=df)
+summary(m3)
+scatterplot(sqrt(fare)~sqrt(dist),data=df,smooth=T)
+scatterplot(log(fare)~log(dist),data=df,smooth=F)
+m4<-lm(sqrt(fare)~sqrt(dist)+f.concen,data=df)
+summary(m4)
+Anova(m4)
+
+```
+
+A logarithmic transformation for both variables can be investigated. Nevertheless, Box-Cox method in MASS library does not include 0 power transformation (logarithm) and suggest a squared root for the target and the explanatory variable. Both solutions have been considered as correct. Using squared root transformations the coefficient of determination for the simple linear model is 35%. Adding factor f.concen improves by 1% model explicability. To properly answer the question a net-effect test for f.concen should be addressed: H0 'once sqrt(dist) is already in the model, adding f.concen is not worth'. H0 is rejected and thus f.concen additive net-effect is meaningful.
+
+**6.	Indicate whether the relationship between the air fare and the length of the route depends on the monopoly factor on the route? Calculate the models involved, make the appropriate hypothesis tests and interpret them statistically. **
+
+```{r}
+scatterplot(sqrt(fare)~sqrt(dist)|f.concen,data=df,smooth=F)
+m5<-lm(sqrt(fare)~sqrt(dist)*f.concen,data=df)
+summary(m5)
+anova(m4,m5)
+Anova(m5)
+```
+
+The question refers to the need of interactions between f.concen levels and sqrt(dist) explanatory variable. Model m5 explicability does not improve espectacularly, but using a Fisher (or directly, Anova(m5)) to test interaction need, it can be seem that at the common confidence level the null hypothesis has to be rejected (pval=0.0007224<<0.05), thus interactions are needed. 
+
+**7.	Select the best model available so far. Interpret the equations that relate the explanatory variables to the answer (fare). Graphically assess the best model obtained so far. Assess the presence of outliers in the studentized residuals at a 99% confidence level. Indicate what those observations are.**
+
+```{r}
+par(mfrow=c(2,2))
+plot(m5,id.n=0)
+par(mfrow=c(1,1))
+qnorm(0.995)
+ll<-which(abs(rstudent(m5))>qnorm(0.995));length(ll)
+df[ll,]
+```
+
+The best model is m5. Interpretation means writing the equations:
+
+  - (ref level) sqrt(fare)=(8.25+0)+(0.164+0)sqrt(dist) = 8.25 + 0.164 sqrt(dist) 
+  - ((0.456,0.587] level) sqrt(fare)=(8.25-0.472592)+(0.164+0.019885)sqrt(dist)=  7.78 +0.18 sqrt(dist)
+  - ((0.587,0.738] level) sqrt(fare)=(8.25-1.815195)+(0.164+0.073072)sqrt(dist)= 6.44 + 0.24 sqrt(dist)
+  - ((0.738,1] level) sqrt(fare)=(8.25+0.796818)+(0.164-0.008044)sqrt(dist)=  9.05 + 0.16 sqrt(dist)
+  
+Normality for residuals does not hold, since tails are separated from the theoretical distribution.Outliers are not present, but a clear pattern appears: negative residuals value are in absolute value lower than positive residual variability. Homocedasticity seems to hold. Unusual observations are present (large leverage).
+
+Studentized residuals have a t-Student distribution, however for large samples like this, a normal approximation can  be used to determine lower and upper bound for studentized residuals at 1% bilateral level; [-2.576,2.576] are acceptable and for those out of these bounds missfit is detected. Flights for Atlanta - Charlotte and Philadelphia-Richmond are short and not very demanded. Outliers are 188, 1472, 2032 and 4100 according to the requested criteria.
+
+**8.	Study the presence of a priori influential data observations, indicating their number according to the criteria studied in class.**
+
+```{r}
+influencePlot(m5,id=list(method="noteworthy",n=3))
+3*mean(hatvalues(m5))
+llhii<-which(hatvalues(m5)>3*mean(hatvalues(m5)));length(llhii)
+```
+
+Potential influent observations are those whose leverage is above three times the mean leverage (or 3p/n); 0.0052. There are 21 observations satisfying this criteria, but only 3 are remarkable ones: 1532, 1536 and 4108. None of them has a large residual, thus they are not dangerous. You can use influencePlot() to support your conclusions.
+
+**9.	Study the presence of a posteriori influential values, indicating the criteria studied in class and the actual atypical observations.**
+
+```{r}
+Boxplot(cooks.distance(m5))
+thrch<-4/(nrow(df)-length(coef(m5)));thrch
+df[508,]
+df["2032",]
+```
+
+Boxplotting Cook's distance shows a Dallas-San José flight (1438km, 444$ and 750 pax) as the only severe outlier and it is confirmed by influencePlot() since it combines missfit (2.83 and large leverage 0.021).
+
+**10.	Given a flight of a distance of 300km, with a daily average of 1000 passengers / day and the existence of the most monopolistic behavior in the service, what would be the expected fare with a 95% confidence interval?.**
+
+```{r}
+summary(m5)
+predict(m5,newdata=data.frame(dist=300,f.concen="(0.738,1]"),interval= "prediction")^2
+
+```
+
+According to m5 model and taking into account that predict method returns predictions in the squared root scale, fare point estimate would be 138$ and a 95% confidence interval prediction would be from 55 to 258 dollars.
+
+**Do not forget to Knit to word and later to .pdf before posting your answers in ATENEA. **

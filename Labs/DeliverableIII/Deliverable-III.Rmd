@@ -16,7 +16,7 @@ editor_options:
 # Load Required Packages: to be increased over the course
 options(contrasts=c("contr.treatment","contr.treatment"))
 
-requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","ggpubr", "corrplot", "moments")
+requiredPackages <- c("missMDA","chemometrics","mvoutlier","effects","FactoMineR","car", "factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","ggpubr", "corrplot", "moments","rmarkdown", "tinytex","effects")
 missingPackages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
 
 if(length(missingPackages)) install.packages(missingPackages)
@@ -218,8 +218,11 @@ vif(m4)
 par(mfrow=c(2,2))
 plot( m4, id.n=0 )
 par(mfrow=c(1,1))
+plot
+#marginalModelPlots(m4)
 ```
 
+Como vemos hemos conseguido que la variable numérica tlenkm tenga forma de parávola convexa, de manera que si aumenta la distancia recorrida aumenta el Total amount. También podemos observar que las otras variables se comportan de manera similar similar a la variable numérica tlenkm pero de forma lineal. En contraposición la variable espeed es inversamente proporcional respecto al total amount, eso es debido a que si aumentamos la velocidad llegamos antes a los puntos y por lo tanto el taximetro cuenta menos tiempo recorrido.
 
 ```{r}
 summary(resid(m4))
@@ -241,33 +244,38 @@ with(df,tapply(Total_amount,RateCodeID,summary))
 # Using factors as explanatory variables
 ## Try to change numerical each regressor by its discretized factor
 
+En este apartado se explica los diferentes factores que podrían ser utilizados para obtener un modelo lineal. Para ello, miraremos si nuestro modelo de apartado anterior, que trataba solo con variables numericas explicativas mejora añadiendo algunas variables categoricas explicativas.
+
 ```{r}
+m4<-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
+    lpep_pickup_time + distHaversine,data=df)
+m41 <-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + f.Fare_amount + espeed + Tip_amount + Tolls_amount + 
+    lpep_pickup_time + distHaversine,data=df)
+m42 <-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + f.espeed + Tip_amount + Tolls_amount + 
+    lpep_pickup_time + distHaversine,data=df)
+m43 <-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + AnyTip + Tolls_amount + 
+    lpep_pickup_time + distHaversine,data=df)
+m44 <-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + f.Fare_amount + espeed + Tip_amount + AnyToll + 
+    lpep_pickup_time + distHaversine,data=df)
+m45 <-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + f.Fare_amount + espeed + Tip_amount + AnyToll + 
+    lpep_pickup_period + distHaversine,data=df)
+m46 <-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + f.Fare_amount + espeed + Tip_amount + AnyToll + 
+    lpep_pickup_time + f.distHaversine,data=df)
+BIC(m4,m41,m42,m43,m44,m45,m46)
+```
 
-m30<-lm(log(Total_amount) ~  Extra + Tip_amount + Tolls_amount + improvement_surcharge + espeed + log(tlenkm)  ,data=df)
-Anova(m30)
-vif(m30)
+Si intentemos categorizar todas aquellas variables que en el modelo del apartado anterior nos da resultado. Observamos que el único modelo que mejor el resultado es aquel con la variable de distretización AnyTip. A pesar de todo hemos considerado no oportuno utilizar la variable de distretización para mejorar el modelo.
 
-vars_enum<-c("Extra","Tip_amount","Tolls_amount","improvement_surcharge","tlenkm")
-vars_edis<-c("VendorID","RateCodeID","Payment_type","period")
+```{r}
+m4<-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
+    lpep_pickup_time + distHaversine,data=df)
 
-df$f.extra <- factor(df$Extra)
+```
 
-m31<-lm(log(Total_amount) ~ f.extra + Tip_amount + Tolls_amount + improvement_surcharge + espeed + log(tlenkm)  ,data=df)
+Si intentamos 
 
-anova(m30, m31)  # NOT POSSIBLE
-BIC(m30,m31)
 
-m32<-lm(log(Total_amount) ~ f.extra + Tip_amount + f.tolls+ improvement_surcharge + espeed + log(tlenkm)  ,data=df)
-BIC(m30,m31,m32)
-
-m33<-lm(log(Total_amount) ~ f.extra + Tip_amount + f.tolls+ f.scharge + espeed + log(tlenkm)  ,data=df)
-BIC(m30,m31,m32,m33)
-
-m34<-lm(log(Total_amount) ~ f.extra + Tip_amount + f.tolls+ f.scharge + f.speed + log(tlenkm)  ,data=df)
-BIC(m30,m31,m32,m33,m34)
-
-m35 <- .....
-
+```{r}
 Anova(m35)
 summary(m35)
 model.matrix(m35)[1:12,]
