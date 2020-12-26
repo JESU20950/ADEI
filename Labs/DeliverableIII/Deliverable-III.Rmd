@@ -247,12 +247,12 @@ m7<-lm(Total_amount ~  f.tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amoun
 summary(m7)
 m8<-lm(Total_amount ~  tlenkm +f.Fare_amount + espeed + Tip_amount + Tolls_amount,data=df)
 summary(m8)
-BIC(m6,m7,m8)
+m9<-lm(Total_amount ~  f.tlenkm +Fare_amount + f.espeed + Tip_amount + Tolls_amount,data=df)
+summary(m9)
+BIC(m6,m7,m8,m9)
 ```
 Provamos a cambiar la variable tlenkm por su factor obteniendo una explicación de la variabilidad muy similar, aún así, el método BIC nos indica que sigue siendo mejor el modelo anterior siendo su BIC menor.Y la misma argumentación podemos aplicar para el uso del factor de Fare_amount aunque este si que muestra un descenso significativo de la explicación de la variabilidad del target.
 
-
-##Efectes Nets
 
 ```{r}
 par(mfrow=c(2,2))
@@ -288,7 +288,7 @@ Con el segundo plot podemos observar los individuos inusuales y ver si són o no
 
 
 
-
+##Efectes nets
 
 
 ```{r}
@@ -314,33 +314,24 @@ with(df,tapply(Total_amount,RateCodeID,summary))
 En este apartado se explica los diferentes factores que podrían ser utilizados para obtener un modelo lineal. Para ello, miraremos si nuestro modelo de apartado anterior, que trataba solo con variables numericas explicativas mejora añadiendo algunas variables categoricas explicativas.
 
 ```{r}
-m4<-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
-    lpep_pickup_time + distHaversine,data=df)
-m41 <-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + f.Fare_amount + espeed + Tip_amount + Tolls_amount + 
-    lpep_pickup_time + distHaversine,data=df)
-m42 <-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + f.espeed + Tip_amount + Tolls_amount + 
-    lpep_pickup_time + distHaversine,data=df)
-m43 <-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + AnyTip + Tolls_amount + 
-    lpep_pickup_time + distHaversine,data=df)
-m44 <-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + f.Fare_amount + espeed + Tip_amount + AnyToll + 
-    lpep_pickup_time + distHaversine,data=df)
-m45 <-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + f.Fare_amount + espeed + Tip_amount + AnyToll + 
-    lpep_pickup_period + distHaversine,data=df)
-m46 <-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + f.Fare_amount + espeed + Tip_amount + AnyToll + 
-    lpep_pickup_time + f.distHaversine,data=df)
-BIC(m4,m41,m42,m43,m44,m45,m46)
+m6<-lm(Total_amount ~  tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amount,data=df)
+m6a <-lm(Total_amount ~  poly(tlenkm,2) +Fare_amount + espeed + Tip_amount + Tolls_amount,data=df)
+m6b <-lm(Total_amount ~  tlenkm +poly(Fare_amount,2) + espeed + Tip_amount + Tolls_amount,data=df)
+m6c <-lm(Total_amount ~  tlenkm+ Fare_amount + +poly(espeed,2) + Tip_amount + Tolls_amount,data=df)
+m6d <-lm(Total_amount ~  tlenkm+ Fare_amount + +espeed + poly(Tip_amount,2) + Tolls_amount,data=df)
+m6e <-lm(Total_amount ~  tlenkm +Fare_amount + +espeed + Tip_amount + poly(Tolls_amount,2),data=df)
+
+BIC(m6,m6a,m6b,m6c,m6d,m6e)
+summary(m6b)
 ```
 
-Si intentemos categorizar todas aquellas variables que en el modelo del apartado anterior nos da resultado. Observamos que el único modelo que mejor el resultado es aquel con la variable de distretización AnyTip. A pesar de todo hemos considerado no oportuno utilizar la variable de distretización para mejorar el modelo.
+Si intentemos categorizar todas aquellas variables que en el modelo del apartado anterior nos da resultado. Observamos que el único modelo que da mejor el resultado es aquel con la variable  Fare_amount en la que se aplica un polinomio de segundo grado. A pesar de todo hemos considerado no oportuno utilizar este modelo debido a la mínima diferencia de BIC así como en cuanto a la explicación de la variablilidad que, si bien aumenta, no consideramos que lo suficiente como para justificar la complejidad añadida al modelo. Al no observar ninguna transformación que mejore sustancialmente el modelo tampoco consideramos hacer una combinación de las mismas.
 
 ```{r}
-m4<-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
-    lpep_pickup_time + distHaversine,data=df)
-
+summary(m6)
 ```
 
-Si intentamos 
-
+###FALTAN EFECTES NETS I BRUTS  
 
 ```{r}
 Anova(m35)
@@ -371,40 +362,58 @@ vif(m36)
 
 ```
 
-## Adding factors: main effects
-
-```{r}
-names(df)
-m40<-lm(log(Total_amount) ~ Tip_amount + log(tlenkm)+ f.tolls+ f.scharge + f.speed + f.extra + RateCodeID + VendorID + Payment_type+period ,data=df)
-
-summary(m40)
-Anova( m40 )
-
-m41<-lm(log(Total_amount) ~ Tip_amount + log(tlenkm)+ f.tolls + f.speed + f.extra + RateCodeID + Payment_type+period ,data=df)
-
-anova(m41, m40)
-```
-
 
 ```{r}
 # Interactions
 # 
-m50<-lm(log(Total_amount) ~ (Tip_amount + log(tlenkm))*(f.tolls + f.speed + f.extra + RateCodeID + Payment_type+period) ,data=df)
+m9<-lm(Total_amount ~  f.tlenkm +Fare_amount + f.espeed + Tip_amount + Tolls_amount,data=df)
+summary(m9)
 
-m51<-step( m50, k=log(nrow(df)))
-Anova(m51)
-summary( m51 )
+m9a<-lm(Total_amount ~  f.tlenkm*(Fare_amount + f.espeed + Tip_amount + Tolls_amount),data=df)
+summary(m9a)
+m9aa<-step( m9a, k=log(nrow(df)))
+
+m9b<-lm(Total_amount ~  f.tlenkm*f.espeed + Fare_amount + Tip_amount + Tolls_amount,data=df)
+summary(m9b)
+m9ba<-step( m9b, k=log(nrow(df)))
+
+m9c<-lm(Total_amount ~  Fare_amount*(f.tlenkm + f.espeed + Tip_amount + Tolls_amount),data=df)
+summary(m9c)
+m9ca<-step( m9c, k=log(nrow(df)))
+summary(m9ca)
+
+m9d<-lm(Total_amount ~  Tip_amount*( Fare_amount+f.tlenkm + f.espeed+ Tolls_amount),data=df)
+summary(m9d)
+m9da<-step( m9d, k=log(nrow(df)))
+
+m9e<-lm(Total_amount ~  Tolls_amount*( Fare_amount+f.tlenkm + f.espeed + Tip_amount),data=df)
+summary(m9e)
+m9ea<-step( m9e, k=log(nrow(df)))
 
 
-m55<- ....
+BIC(m6,m9,m9a,m9b,m9c,m9ca,m9d,m9da,m9e,m9ea)
 
-ll1<-Boxplot(rstudent(m55));ll1
-sel2<-which(hatvalues(m55)>5*length(m55$coefficients)/nrow(df));sel2;length(sel2)
-ll2<-which(row.names(df) %in% names(hatvalues(m25)[sel2]));ll2
-sel3<-which(cooks.distance(m55)> 0.5 );sel3;length(sel3)
-ll3<-which(row.names(df) %in% names(cooks.distance(m55)[sel3]));ll3
+summary(m9ca)
+summary(m9da)
+summary(m9ea)
 
+par(mfrow=c(2,2))
+influencePlot(m6)
+influencePlot(m9ca)
+
+ll1<-Boxplot(rstudent(m9ca));ll1
+sel2<-which(hatvalues(m9ca)>5*length(m9ca$coefficients)/nrow(df));sel2;length(sel2)
+ll2<-which(row.names(df) %in% names(hatvalues(m9ca)[sel2]));ll2
+sel3<-which(cooks.distance(m9ca)> 0.5 );sel3;length(sel3)
+ll3<-which(row.names(df) %in% names(cooks.distance(m9ca)[sel3]));ll3
 
 ```
 ```
+Para analizar las interacciones que pueden hacer mejorar nuestro modelo, consideramos el modelo m9 al disponer de dos variables factor necesarias por las especificaciones del report.
 
+Después de aplicar una serie de interacciones entre factores así como entre numéricas y factores, vemos como aparecen 3 modelos con un BIC inferior a nuestro modelo sin interacciones m9, los cuales serían, en orden de mejor a peor, el m9ca,m9da y m9ea.
+
+Aún así la mejora que obtenemos al aplicar estas interacciones no es lo suficientemente significativa como para justificar el aumento de complejidad  del modelo, así que como modelo principal seguiremos usando el m6.
+
+Aquí podemos ver una comparación de las observaciones inusuales tanto de nuestro modelo como del que hemos escogido con interacciones(m9ca) y vemos como son bastante similares a excepción del individuo 322 que pasa a ser mucho más influyente en el modelo con interacciones. Aún así no hay una gran diferencia entre los demás individuos influyentes como para considerarlo mejor o peor por ello.
+    
