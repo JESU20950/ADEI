@@ -87,13 +87,6 @@ test_dataset<-dff[-l,]
 # Use explanatory numeric variables
 
 
-
-1. Introduir totes les variables numèriques rellevants. 
-2. Veure si cal substituir alguna numèrica pel seu factor equivalent
-3. Afegir els efectes principals dels factors. Retenir els d'efectes nets significatius.
-4. Afegir interaccions. Interaccions entre factors (dobles).Interaccions entre factor-numèrica (dobles).
-5. Diagnosi residus i obs. falta d'ajust i/o influents
-
 ```{r}
 m<-glm(AnyTip~.,family="binomial",data=train_dataset[,c("AnyTip",vars_cexp)])
 summary(m)
@@ -127,21 +120,6 @@ summary(m3)
 
 
 
-```{r}
-plot(allEffects(m3))
-```
-Si intentamos entender el modelo, vemos que si aumenta la distancia recorrida en km o aumenta el valor Pickup_longitude disminuye la probabilidad de dar propina. En contraposición, si la distancia Haversine es mayor entonces aumenta la probabilidad de dar propina. 
-
-```{r}
-marginalModelPlots(m3)
-```
-
-Si vemos el marginal model plot, vemos que la linea de los modelos se ajusta más o menos a la linea de los datos, por cada una de las variables.
-
-```{r}
-residualPlots(m3)
-```
-Si vemos los residuos nos encontramos que en el plot de Linear Predictor - Pearson residuals vemos como la linea de smoother es inclinado por lo tanto tenemos desajuste en el modelo. 
 
 # Consider factors and interactions as explanatory variables
 
@@ -208,25 +186,31 @@ BIC(m8,m82,m83)
 m90 <- m8
 ```
 
-Si intentamos comparar el modelo normal con el modelo con interacción doble en factor y el modelo con interacciçon doble en factor-numèrica, observamos que los modelos empeorán. Por lo tanto, seguiremos con el modelo normal.
+Si intentamos comparar el modelo normal con el modelo con interacción doble en factor y el modelo con interacciçon doble en factor-numèrica, observamos que los modelos empeorán. Por lo tanto, seguiremos con el modelo normal. 
 
 # Final Diagnostics
 
-```{r}
 # Boxplot dels residus
+```{r}
 Boxplot(rstudent(m90),id.n=15)
 sout<-which(abs(rstudent(m90))>2.25);length(sout)
 llout<-which(row.names(train_dataset) %in% names(rstudent(m90)[sout]));llout
-train_dataset[llout,] 
+```
+
+Como podemos ver, en total encontramos 13 individuos que tienen como residuo un valor superior a 2.25.
 # Observacions potencialment influents
+```{r}
 quantile(hatvalues(m90),seq(0,1,0.1))
 mean(hatvalues(m90))
 hh<-5*mean(hatvalues(m90));hh
 shat<-which(hatvalues(m90)>hh);length(shat);shat
 llhat<-which(row.names(train_dataset) %in% names(rstudent(m90)[shat]));llhat
-train_dataset[llhat,]
+```
+En total encontramos que 48 individuos son potencialmente influentes.
+
 # Influent data
 
+```{r}
 Boxplot(cooks.distance(m90))
 
 scoo<-which(cooks.distance(m90)>0.02);length(scoo);scoo
@@ -241,20 +225,48 @@ train_dataset[llcoo,]
 llfora1<-row.names(llista);llfora1;length(llfora1)
 ll<-which(row.names(train_dataset)%in%llfora1);ll;length(ll)
 df1<-train_dataset[-ll,]
+```
 
-# Recalcular el model ....
+En total encontramos que 22 individuos son influentes.
+
+
+```{r}
+m10<-glm(AnyTip~ (poly(tlenkm,2)+Pickup_longitude)+(f.MTA_tax+lpep_pickup_period+f.Extra), family="binomial", data=df1)
+m101<-glm(AnyTip ~ (poly(tlenkm,2)+Pickup_longitude)+(f.MTA_tax+lpep_pickup_period+f.Extra)^2, family="binomial", data=df1) # Interaccions dobles en factors
+m102<-glm(AnyTip ~ (poly(tlenkm,2)+Pickup_longitude)*(f.MTA_tax+lpep_pickup_period+f.Extra), family="binomial", data=df1)  # Interaccions dobles en factor-numèrica
+
+BIC(m10,m101,m102)
+
+```
+
+Si volvemos a recalcular el modelo observamos que el modelo cuya formula es un sumatorio, sigue siendo el mejor modelo para nuestros datos.
+
+```{r}
+plot(allEffects(m10))
+```
+Si intentamos entender el modelo, vemos que si aumenta la distancia recorrida en km o aumenta el valor Pickup_longitude disminuye la probabilidad de dar propina. Si se paga taxa entonces la probabilidad de dar propina es muy alta y si no se paga taxas entonces la probabilidad de no dar propinas es muy alta.
+
+```{r}
+marginalModelPlots(m10)
+```
+
+Si vemos el marginal model plot, vemos que la linea de los modelos se ajusta más o menos a la linea de los datos, por cada una de las variables.
+
+```{r}
+residualPlots(m10)
+```
+Si vemos los residuos nos encontramos que en el plot de Linear Predictor - Pearson residuals vemos como la linea de smoother es inclinado por lo tanto tenemos desajuste en el modelo. 
+
+
 
 # Confussion Table
 
-fit.AnyTip<-factor(ifelse(predict(m90,type="response")<0.5,0,1),labels=c("fit.No","fit.Yes"))
+```{r}
+count <- summary(df1$AnyTip)
+count/sum(count)
+fit.AnyTip<-factor(ifelse(predict(m10,type="response")<0.5,0,1),labels=paste("Prediction-AnyTip",c("No","Yes")))
 tt<-table(fit.AnyTip,df1$AnyTip);tt
-sum(tt)
 100*sum(diag(tt))/sum(tt)
-
-m0<-glm(AnyTip~1, family="binomial", data=df1)
-fit0<-predict(m0,type="response")
-fit.AnyTip0<-factor(ifelse(fit0<0.5,0,1),labels=c("fit.Yes"))
-tt0<-table(fit.AnyTip0,df1$AnyTip);tt0;sum(tt0)
-100*sum(tt0[1,2])/sum(tt0)
-
 ```
+Como podemos ver nuestro modelo tiene una precisión del 87.23157. A pesar de todo, no es un modelo totalmente correcto ya que podemos podemos ver como en nuestro dataset hay más individuos con AnyTip Yes que con AnyTip No, por lo tanto nuestro dataset está desbalanceado. Además podemos ver que nuestro modelo tiene una tendencia a predecir siempre que el individuo da propinas, probablemente causado por el desbalance del dataset.
+
