@@ -40,6 +40,10 @@ rm(list=ls())
 
 
 #setwd("~/Desktop/ADEI/Labs/DeliverableIII")
+<<<<<<< HEAD
+setwd("C:/Users/jesus/Desktop/ADEI/Labs/DeliverableIII")
+=======
+>>>>>>> a02eb430863f78229c4b7b5ce3c3bca0e4ae59be
 df <- read.table("Deliverable1.csv",header=T, sep=",");
 summary(df)
 ```
@@ -122,7 +126,11 @@ Como podemos ver el modelo tiene una explicatividad del 96'63% de la variabilida
 ```{r}
 vif(m)  # Check association between explanatory vars
 ```
+<<<<<<< HEAD
+A partir de al variance inflation factors vemos la asociacion entre las variables explicativas. Podemos observar que las variables tlenkm, Fare amount y la distancia Haversine están muy correlacionadas. También podemos ver que la distancia fare amount y la distancia Haversine tienen un valor similar de inflacción.
+=======
 A partir de la variance inflation factors vemos la asociacion entre las variables explicativas. Podemos observar que las variables tlenkm, Fare amount y la distancia Haversine están muy correlacionadas. También podemos ver que la distancia fare amount y la distancia Haversine tienen un valor similar de inflacción lo que nos hace creer que hay una gran relación entre ellas.
+>>>>>>> a02eb430863f78229c4b7b5ce3c3bca0e4ae59be
 
 Tras haber analizado todas las variables que no aportaban mucho en el modelo decidimos eliminar las variables passenger count y el traveltime de este ya que eran las dos primeras variables que elimina el vif y las rechazadas por la hipotesi nula. Podriamos eliminar la variable Fare_amount, ya que practicamente la misma que nuestro target, sin embargo decidimos no eliminarla. Aún así esperaremos a ver los resultados que nos muestra el step para acabar de concretar si eliminamos del modelo alguna otra variable.
 
@@ -331,7 +339,12 @@ Si intentemos categorizar todas aquellas variables que en el modelo del apartado
 summary(m6)
 ```
 
+<<<<<<< HEAD
 ###FALTAN EFECTES NETS I BRUTS  
+=======
+
+
+>>>>>>> d1603d6e2810c0dd4d67da0451e11db64ae67e69
 
 ```{r}
 Anova(m35)

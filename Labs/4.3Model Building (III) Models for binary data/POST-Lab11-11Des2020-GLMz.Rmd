@@ -1,0 +1,290 @@
+---
+title: "Session 11: NY Cabs Data - Generalized Linear Model"
+author: "Lidia Montero"
+date: "December 11th, 2020"
+output: 
+  html_document: 
+    toc: true
+    toc_depth: 3
+    number_sections: true
+editor_options: 
+  chunk_output_type: console
+---
+
+# Introduction
+
+## Data Description
+
+Description http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml
+Data Dictionary - SHL Trip Records -This data dictionary describes SHL trip data in visit http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml:
+
+  - VendorID	A code indicating the LPEP provider that provided the record.      1= Creative Mobile Technologies, LLC; 2= VeriFone Inc.   
+  - lpep_pickup_datetime	The date and time when the meter was engaged.    
+  - lpep_dropoff_datetime	The date and time when the meter was disengaged.     
+  - Passenger_count	The number of passengers in the vehicle. This is a driver-entered value.    -  Trip_distance 	The elapsed trip distance in miles reported by the taximeter.   
+  - Pickup_longitude	 Longitude where the meter was engaged.   
+  - Pickup_latitude	Latitude where the meter was engaged.   
+  - RateCodeID	The final rate code in effect at the end of the trip.  1= Standard rate  2=JFK 3=Newark 4=Nassau or Westchester 5=Negotiated fare 6=Group ride   
+  - Store_and_fwd_flag	This flag indicates whether the trip record was held in vehicle memory before sending to the vendor, aka "store and forward," because the vehicle did not have a connection to the server: Y= store and forward trip  N= not a store and forward trip   
+  - Dropoff_longitude	Longitude where the meter was timed off.   
+  - Dropoff_ latitude	Latitude where the meter was timed off.   
+  - Payment_type	A numeric code signifying how the passenger paid for the trip.  1= Credit card 2= Cash 3= No charge 4= Dispute 5= Unknown 6= Voided trip   
+  - Fare_amount	The time-and-distance fare calculated by the meter.   
+  - Extra	 Miscellaneous extras and surcharges.  Currently, this only includes the $0.50 and $1 rush hour and overnight charges. 
+  - MTA_tax	 $0.50 MTA tax that is automatically triggered dfd on the metered rate in use.    - Improvement_surcharge	$0.30 improvement surcharge assessed on hailed trips at the flag   drop. The improvement surcharge began being levied in 2015.   
+  - Tip_amount	 This field is automatically populated for credit card tips. Cash tips are not included.   
+  - Tolls_amount	Total amount of all tolls paid in trip.    
+  - Total_amount	The total amount charged to passengers. Does not include cash tips.   
+  - Trip_type	A code indicating whether the trip was a street-hail or a dispatch that is automatically assigned dfd on the metered rate in use but can be altered by the driver. 
+1= Street-hail 2= Dispatch  
+
+## Load Required Packages
+
+```{r, echo=FALSE, include=FALSE}
+rm(list=ls())
+# Load Required Packages: to be increased over the course
+
+requiredPackages <- c("effects","FactoMineR","car","lmtest", "factoextra","RColorBrewer","ggplot2","moments")
+missingPackages <- requiredPackages[!(requiredPackages %in% installed.packages()[,"Package"])]
+
+if(length(missingPackages)) install.packages(missingPackages)
+lapply(requiredPackages, require, character.only = TRUE)
+
+```
+
+# Statistical Modelling
+
+## Load Data after Cleaning and EDA
+
+```{r}
+# green_tripdata_2016-01
+setwd("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS")
+load("C:/Users/lmontero/Dropbox/DOCENCIA/FIB-ADEI/PRACTICA/NYCABS/LABS/MyTaxi5000Clean.RData")
+summary(df)
+```
+
+# Binary Logitics Regression
+
+Explanatory variables numeric only
+
+*Target AnyTip*
+
+```{r}
+names(df)
+vars_con<-names(df)[c(3:15,17:21)];vars_con
+vars_dis<-names(df)[c(1,2,16,22:36)];vars_dis
+vars_res<-names(df)[c(15,23)]
+vars_cexp<-vars_con[c(5:9,11:12,14:18)];vars_cexp
+
+# Feature Selection 
+table(df$AnyTip,df$Payment_type)
+
+# catdes()
+res.cat <- catdes(df,num.var=which(names(df)=="AnyTip"))
+res.cat$quanti.var
+res.cat$quanti
+res.cat$test.chi2
+res.cat$category
+# summary(df[,vars_cexp])
+# 
+# Clearly, neither Payment_type can not be used as a predictor, nor Tip_amount
+
+table(df$Extra)
+table(df$MTA_tax)
+df$f.extra<-0
+df$f.extra[df$Extra>0]<-1
+df$f.extra[df$Extra>0.5]<-2
+df$f.extra<-factor(df$f.extra,labels=c("Extra-No","Extra-0.5","Extra-1"))
+df$f.tax<-ifelse(df$MTA_tax>0,1,0)
+df$f.tax<-factor(df$f.tax,labels=c("TAX-No","TAX-Yes"))
+```
+
+*Target binary factor AnyTip*
+
+```{r}
+# Split your sample: work and test
+ll<-which(df$Payment_type=="Cash");length(ll)
+dff<-df[-ll,]
+set.seed(12345)
+llwork<-sample(1:nrow(dff),0.70*nrow(dff),replace=FALSE)
+llwork<-sort(llwork);length(llwork)
+dffwork<-dff[llwork,]
+dfftest<-dff[-llwork,]
+```
+
+# Use explanatory numeric variables
+
+1. Introduir totes les variables numèriques rellevants. 
+2. Veure si cal substituir alguna numèrica pel seu factor equivalent
+3. Afegir els efectes principals dels factors. Retenir els d'efectes nets significatius.
+4. Afegir interaccions. Interaccions entre factors (dobles).Interaccions entre factor-numèrica (dobles).
+5. Diagnosi residus i obs. falta d'ajust i/o influents
+
+```{r}
+
+m50<-glm(AnyTip~.,family="binomial",data=dffwork[,c("AnyTip",vars_cexp)])
+# Novelty: family="binomial" Y- Target 1 parameter exponential family -> Totes les habituals
+summary(m50)
+Anova(m50,test="Wald") # Binary target
+vif(m50)
+
+# ... After some work
+
+m51<-glm(AnyTip~Dropoff_longitude+Passenger_count+poly(tlenkm,2)+Tolls_amount+espeed+hour+MTA_tax+Extra,family="binomial",data=dffwork)
+marginalModelPlots(m51)
+
+summary(m51)
+Anova(m51,test="Wald") # No té sentit usar-lo sense validar que no hi ha colinealitat!!!
+
+anova(m50,m51,test="Chisq")  # Not correct - Only for nested models
+anova(m51,m50,test="Chisq")  # Not correct - Only for nested models - Small model first!
+vif(m51)
+
+# Reprenem la modelització segons l'estrategia definida
+
+m50<-glm(AnyTip~.,family="binomial",data=dffwork[,c("AnyTip",vars_cexp)])
+# Novelty: family="binomial" Y- Target 1 parameter exponential family -> Totes les habituals
+vif(m50)
+m51<-glm(AnyTip~Passenger_count+Extra+MTA_tax+Tolls_amount+ tlenkm +espeed+hour,family="binomial",data=dffwork)
+vif(m51)
+summary(m51)
+Anova(m51,test="Wald") # Binary target
+
+m52<-step(m51,k=log(nrow(dffwork)))
+summary(m52)
+
+Anova(m52,test="Wald")
+
+# Understanding the model ...
+# 
+plot(allEffects(m52))
+
+# Using our previous modelling experience
+# 
+marginalModelPlots(m52)
+residualPlots(m52)
+summary(m52)
+BIC(m50,m51,m52)
+
+```
+
+#Diagnostics
+
+```{r}
+# Proposal
+m53<-glm(AnyTip~poly(tlenkm,2)+Extra+MTA_tax,family="binomial",data=dffwork)
+residualPlots(m53)
+Anova(m53,test="Wald")
+```
+
+# Consider factors and interactions as explanatory variables
+
+```{r}
+
+# Consider to deal with some of the current variables as factors: Extra and MTA_tax
+
+m60<-glm(AnyTip~poly(tlenkm,2)+Extra+MTA_tax, family="binomial", data=dffwork)
+summary(m60)
+BIC(m60)
+
+m61<-glm(AnyTip~poly(tlenkm,2)+Extra + f.tax, family="binomial", data=dffwork)
+summary(m61)
+BIC(m60,m61)
+
+# No es pot fer
+#anova(m60,m61,test="Chisq")
+
+vars_dis
+
+m62<-glm(AnyTip~poly(tlenkm,2) + MTA_tax +f.extra, family="binomial", data=dffwork)
+summary(m62)
+
+m63<-glm(AnyTip~poly(tlenkm,2) + f.tax +f.extra, family="binomial", data=dffwork)
+BIC(m62,m60,m61,m63) # Millor model minim BIC - Extra numèrica f.tax factor
+
+m64<-step(m61,k=log(nrow(dffwork)))
+summary(m64)
+Anova(m61,test="Wald")
+vif(m61)
+
+# Decidit quina variable  numèrica cal tractar com a factor. Procedim a  modelar afegint factors
+
+
+m72<-glm(AnyTip~ (poly(tlenkm,2)+Extra)+(f.tax+VendorID+period+f.speed+f.tolls+f.tt+f.extra), family="binomial", data=dffwork)  # Extra no pot estar com numèrica i factor simultàniament en el model
+
+# Per cremar etapes ...
+# 
+m72<-glm(AnyTip~ (poly(tlenkm,2)+Extra)+(f.tax+VendorID+period+f.speed+f.tolls+f.tt), family="binomial", data=dffwork)
+
+Anova(m72, test="Wald")
+
+m73<-step(m72,k=log(nrow(dffwork)))
+summary(m73)
+BIC(m61,m62,m63,m72,m73)
+vif(m73)
+
+plot(allEffects(m73))
+
+# Heu de considerar interaccions entre factors (1) i entre factor-numèrica
+# 
+m80<-glm(AnyTip ~ (poly(tlenkm,2)+Extra)+(f.tax+VendorID+f.speed)^2, family="binomial", data=dffwork) # Interaccions dobles en factors
+m81<-glm(AnyTip ~ (poly(tlenkm,2)+Extra)*(f.tax+VendorID+f.speed), family="binomial", data=dffwork)  # Interaccions dobles en factor-numèrica
+m82<-glm(AnyTip ~ (poly(tlenkm,2)+Extra)*(f.tax+VendorID+f.speed)^2, family="binomial", data=dffwork) # Interaccions dobles en factor-numèrica + dobles entre factors
+
+step(m80, k=log(nrow(dffwork)))
+m90<- step(m80, k=log(nrow(dffwork)))
+
+# So, decide your best model
+
+m90 
+
+```
+
+# Final Diagnostics
+
+```{r}
+# Boxplot dels residus
+Boxplot(rstudent(m90),id.n=15)
+sout<-which(abs(rstudent(m90))>2.25);length(sout)
+llout<-which(row.names(dffwork) %in% names(rstudent(m90)[sout]));llout
+dffwork[llout,] 
+# Observacions potencialment influents
+quantile(hatvalues(m90),seq(0,1,0.1))
+mean(hatvalues(m90))
+hh<-5*mean(hatvalues(m90));hh
+shat<-which(hatvalues(m90)>hh);length(shat);shat
+llhat<-which(row.names(dffwork) %in% names(rstudent(m90)[shat]));llhat
+dffwork[llhat,]
+# Influent data
+
+Boxplot(cooks.distance(m90))
+
+scoo<-which(cooks.distance(m90)>0.02);length(scoo);scoo
+llcoo<-which(row.names(dffwork) %in% names(cooks.distance(m90)[scoo]));llcoo
+
+llista<-influencePlot(m90,id=c(list="noteworthy",n=10))
+influencePlot(m90,id=c(list="noteworthy",n=10))
+attributes(llista)
+influenceIndexPlot(m90)
+dffwork[llcoo,]
+
+llfora1<-row.names(llista);llfora1;length(llfora1)
+ll<-which(row.names(dffwork)%in%llfora1);ll;length(ll)
+df1<-dffwork[-ll,]
+
+# Recalcular el model ....
+
+# Confussion Table
+
+fit.AnyTip<-factor(ifelse(predict(m90,type="response")<0.5,0,1),labels=c("fit.No","fit.Yes"))
+tt<-table(fit.AnyTip,df1$AnyTip);tt
+sum(tt)
+100*sum(diag(tt))/sum(tt)
+
+m0<-glm(AnyTip~1, family="binomial", data=df1)
+fit0<-predict(m0,type="response")
+fit.AnyTip0<-factor(ifelse(fit0<0.5,0,1),labels=c("fit.Yes"))
+tt0<-table(fit.AnyTip0,df1$AnyTip);tt0;sum(tt0)
+100*sum(tt0[1,2])/sum(tt0)
+
+```
