@@ -39,7 +39,8 @@ rm(list=ls())
 #filepath<-"C:/Users/carle/Desktop/ADEI2/"
 
 
-setwd("~/Desktop/ADEI/Labs/DeliverableIII")
+#setwd("~/Desktop/ADEI/Labs/DeliverableIII")
+setwd("C:/Users/jesus/Desktop/ADEI/Labs/DeliverableIII")
 df <- read.table("Deliverable1.csv",header=T, sep=",");
 
 ```
@@ -121,7 +122,7 @@ Como podemos ver el modelo tiene una explicatividad del 96% de la variabilidad d
 ```{r}
 vif(m)  # Check association between explanatory vars
 ```
-A partir de al variance inflation factors vemos la asociacion entre las variables explicativas. Podemos observar que las variables tlenkm, Fare amount y la distancia Haversine están muy correlacionadas. También podemos ver que la distancia fare amount y la distancia Haversine tienen un valor similar de inflacción 
+A partir de al variance inflation factors vemos la asociacion entre las variables explicativas. Podemos observar que las variables tlenkm, Fare amount y la distancia Haversine están muy correlacionadas. También podemos ver que la distancia fare amount y la distancia Haversine tienen un valor similar de inflacción.
 
 
 Cribratge - Remove explanatory variables
@@ -272,7 +273,7 @@ m4<-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount 
 
 ```
 
-Si intentamos 
+
 
 
 ```{r}
