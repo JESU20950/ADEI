@@ -1,14 +1,14 @@
 ---
 title: "Deliverable-III"
 output:
-  word_document:
-    toc: no
-    toc_depth: '4'
   pdf_document:
     toc: no
     toc_depth: '4'
+  word_document:
+    toc: no
+    toc_depth: '4'
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 # Load Required Packages: to be increased over the course
 
@@ -39,9 +39,9 @@ rm(list=ls())
 #filepath<-"C:/Users/carle/Desktop/ADEI2/"
 
 
-setwd("~/Desktop/ADEI/Labs/DeliverableIII")
+#setwd("~/Desktop/ADEI/Labs/DeliverableIII")
 df <- read.table("Deliverable1.csv",header=T, sep=",");
-
+summary(df)
 ```
 
 ## Modify Data
@@ -77,32 +77,33 @@ mn <- mean(df$Total_amount); ss <- sd(df$Total_amount)
 curve(dnorm(x, mean = mn,sd= ss), lwd=2, lty=3, add=T)
 ```
 Antes de poder hacer la modelización hay que mirar si la variable respuesta sigue una distribución normal. Para realizar la comprobación utilizamos diferentes indicadores.
-Si vemos el histograma del Total amount junto a la correcta distribución normal, vemos que el los histogramas no se solapan, lo que significa que tenemos que normalizar la variable.
+Si vemos el histograma del Total amount junto a la correcta distribución normal, vemos que el los histogramas no se solapan, lo que significa que tenemos que normalizar la variable. 
  
 ```{r}
 shapiro.test(df$Total_amount)
 ```
-Si realizamos el test de normalidad Shapiro-Wilk, observamos que la H0 puede ser rechazada. Lo que significa que los datos no siguen una distribución normal.
+Si realizamos el test de normalidad Shapiro-Wilk, observamos que la H0 puede ser rechazada al mostrar un p-value muy inferior a 0.05. Lo que significa que los datos no siguen una distribución normal.
 
 
 
 ```{r}
 skewness(df$Total_amount)  # Normal data should 0 - Right skewed data is present
 ```
-Si realizamos un test de simetria como Skewness, vemos que nos devuelve un valor diferente a 0. Por lo tanto, los datos son asimetrico y como consequencia no siguen una distribución normal. También podemos ver que el valor es superior a 0 por lo tanto los datos son right-skewed.
+Si realizamos un test de simetria como Skewness, vemos que nos devuelve un valor diferente a 0. Por lo tanto, los datos son asimetricos y como consequencia, no siguen una distribución normal. También podemos ver que el valor es superior a 0 por lo tanto los datos son right-skewed lo que significa que  las observaciones presentan una larga cola de observaciones por la derecha.
 
 ```{r}
 kurtosis(df$Total_amount)  # Normal data should 3 - 5.35 >> 3
 ```
 
 Si computamos la curtosis de la variable Total amount, observamos que es superior a 3, lo que significa que no sigue una distribución normal. Tras ver todos estos argumentos, vemos que los datos no siguen una distribución normal.
+
 Es por eso que el metodo más apropiado para calcular la correlación deba ser a partir de Spearman.
 
 ```{r}
 round(cor(df[,c("Total_amount",vars_cexp)], method="spearman"),dig=2) 
 ```
-
 Si vemos los resultados, observamos que la distancia recorrida, la tarifa abonada, la duración del viaje y la distancia Haversine son las variables más correlacionadas con el target numérico, Total amount.
+
 ```{r}
 round(cor(df[,c("Total_amount",vars_cexp)], method="pearson"),dig=2)
 ```
@@ -115,128 +116,194 @@ m <- lm( Total_amount~., data=df[,c("Total_amount",vars_cexp)])
 summary(m)
 Anova(m) 
 ```
-Como podemos ver el modelo tiene una explicatividad del 96% de la variabilidad del target. A pesar de todo, hay variables como el passenger count y el traveltime que no son significativas ya que tienen una proporcion de la distribución t inferior a 0.05.
+Como podemos ver el modelo tiene una explicatividad del 96'63% de la variabilidad del target. A pesar de todo, hay variables como el passenger count y el traveltime que no son significativas ya que, como podemos ver en el test Anova tienen una proporción de la distribución t superior a 0.05.
 
 
 ```{r}
 vif(m)  # Check association between explanatory vars
 ```
-A partir de al variance inflation factors vemos la asociacion entre las variables explicativas. Podemos observar que las variables tlenkm, Fare amount y la distancia Haversine están muy correlacionadas. También podemos ver que la distancia fare amount y la distancia Haversine tienen un valor similar de inflacción 
+A partir de la variance inflation factors vemos la asociacion entre las variables explicativas. Podemos observar que las variables tlenkm, Fare amount y la distancia Haversine están muy correlacionadas. También podemos ver que la distancia fare amount y la distancia Haversine tienen un valor similar de inflacción lo que nos hace creer que hay una gran relación entre ellas.
 
+Tras haber analizado todas las variables que no aportaban mucho en el modelo decidimos eliminar las variables passenger count y el traveltime de este ya que eran las dos primeras variables que elimina el vif y las rechazadas por la hipotesi nula. Podriamos eliminar la variable Fare_amount, ya que practicamente la misma que nuestro target, sin embargo decidimos no eliminarla. Aún así esperaremos a ver los resultados que nos muestra el step para acabar de concretar si eliminamos del modelo alguna otra variable.
 
 Cribratge - Remove explanatory variables
 
 BIC - Bayesian Information Criteria - Schwarz
 ```{r}
-m <- step( m, k=log(nrow(df)) )
+m1 <- step( m, k=log(nrow(df)) )
+summary(m1)
 ```
 Como podemos ver que si aplicamos el Stepwise Algorithm Akaike segun el Akaike information criterion (AIC), vemos que nos elimina las variables explicativas traveltime, Passenger_count y lpep_pickup_time. La calidad del criterio de AIC se nos queda en 6439.54. 
 
-```{r}
-# 
-m <- lm( Total_amount ~ tlenkm + Fare_amount + espeed + Tip_amount + Tolls_amount + 
-    lpep_pickup_time + distHaversine, data=df[,c("Total_amount",vars_cexp)])
-Anova(m)  
-```
-Tras haber analizado todas las variables que no aportaban mucho en el modelo decidimos eliminar las variables passenger count y el traveltime de nuestro modelo ya que era las dos primeras variables que elimina el vif y las rechazadas por la hipotesi nula. Podriamos eliminar la variable Fare_amount, ya que practicamente la misma que nuestro target, sin embargo decidimos no eliminarla.
+Al realizar un summary del modelo resultante vemos como la explicación de la variablilidad del target, una vez eliminadas las variables del anterior modelo, se mantiene casi igual pasando de 96'63 a 96'62. Consideramos el nuevo modelo m1 ya que obtenemos la misma explicación prácticamente, simplificando en 3 variables el nuevo modelo.
+
+El modelo resultante tendría la siguiente predicción:
+Y=1.57+0.22*tlenkm+0.95*Fare_amount-0.015*espeed+1.01*Tip_amount+1.01*Tolls_amount-0.15*distHaversine
 
 ```{r}
-#marginalModelPlots(m)
+marginalModelPlots(m1)
+plot(m1,id.n=0)
+
 ```
 
-En la imagen superior podemos ver los resultados que obtenemos del modelo de regresión. Como vemos la distancia recorrida en km y la distancia de Haversine siguen una regresion lineal perfecta.
+En la imagen superior podemos ver los resultados que obtenemos del modelo de regresión. Como vemos la distancia recorrida en km, el importe de la tarifa y la distancia de Haversine siguen una regresion lineal perfecta. Aun así podemos ver como las observaciones no se distribuyen de una manera homogenea por todo el rango de valores posibles sin llegar, por eso, a mostrar patrones que puedan hacernos considerar tratarlas. A destacar sobretodo el Tolls amount que al ser una variable con valores enteros y más cercana a ser considerada un factor, vemos como no se ajustan sus observaiones al modelo de regresión pero es perfectamente normal debido a sus propiedades.
+
+
+Al disponer de una explicación de la variabilidad del target por el modelo tan alta y una igualdad entre la predicción de las variables y las observaciones que define el modelo, talvez no tendría demasiado sentido realizar transformaciones para aumentar este Multiple R-squared pero si para reducir el Residual Standard error del modelo. 
+
+Si observamos los residuos encontramos algun valor negativo y varios valores fuera de la linea residual. Además encontramos que los residuos no muestrán una tendencia normalizada debido a las observaciones de la derecha del gráfico, muy alejadas de lo que sería considerada la normal del target. Una de las modificaciones que hicimos es modificar la escala de la variable target a logaritmica pero no observamos mejoras al respecto. 
 
 Transformations
 
 ```{r}
-m2 <-lm(Total_amount ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
-    lpep_pickup_time + distHaversine,data=df)
+residualPlots(m1)
+m2 <-lm(Total_amount ~  tlenkm + Fare_amount + espeed + Tip_amount + poly(Tolls_amount,2) + distHaversine,data=df)
 summary(m2)
-Anova(m2) 
-vif(m2)
-#marginalModelPlots(m2)
+residualPlots(m2)
+anova(m1,m2)
+
 ```
-Si aplicamos la computacion orthogonal polinomial de grado 2 a la distancia recorrida del taxi, vemos que el resultado es parecido. Tiene la misma explicatividad y la linea azul, linea de los datos, se ajusta bastante a la linea roja, linea que representa el modelo.
+Al ver los gráficos obtenidos por el residualplots vemos como la única variable que sufre un patrón respecto el smoother sería la de tolls amount así que probaríamos a aplicarle alguna transformación. 
 
-
+Una vez usado un polinomio de grado dos para esta transformación vemos como la linea de los residuos se ajusta más al smoother pero,Al analizar el summary vemos como la explicación de la variabilidad no varia apenas y al usar el anova(m1,m2) vemos como no debemos considerar esta transformación.
 
 ## Diagnostics
 
 ```{r}
 par(mfrow=c(2,2))
-plot(m, id.n=0)
+plot(m1, id.n=0)
 par(mfrow=c(1,1))
 ```
-Si observamos los residuos encontramos algun valor negativo y varios valores que fuera de la linea residual. Además encontramos que los residuos no muestrán una tendencia normalizada. Una de las modificaciones que hicimos es modificar la escala de la variable target a logaritmica. 
+Si observamos los residuos del m1 encontramos algun valor negativo y varios valores fuera de la linea residual. Además encontramos que los residuos no muestrán una tendencia normalizada debido a las observaciones de la derecha del gráfico, muy alejadas de lo que sería considerada la normal del target. Una de las modificaciones que hicimos es modificar la escala de la variable target a logaritmica pero no observamos mejoras al respecto. 
 
 ```{r}
 l <- which(df$Total_amount == 0 )
 df[l,'Total_amount'] <- 0.0001
-m3 <- lm( log(Total_amount) ~ poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
-    lpep_pickup_time + distHaversine, data=df)
+m3 <- lm( log(Total_amount) ~ tlenkm + Fare_amount + espeed + Tip_amount + Tolls_amount+ distHaversine, data=df)
 summary(m3)
 ```
+Con el objetivo de mejorar el modelo y buscar la normalidad de la variable target Total amount, le aplicamos el logaritmo. Aunque antes de aplicarlo debemos eliminar las observaciones que contengan un 0 y es por eso que les asignamos un valor de 0.0001.
 
-Como podemos ver, tras modificar realizar la pertinente modificacion, nos encontramos que la hiptesi nula de la variable toll amount puede ser rechaza. Como consequencia provamos con eliminar de la formula. También hemos decidido eliminar la variable distHaversine de la modelización ya que a pesar de que su valor sea inferior a 0.5 seguro que mejora el modelo.
-
-```{r}
-m3 <- lm( log(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + 
-    lpep_pickup_time, data=df)
-summary(m3)
-Anova(m3) 
-vif(m3)
-#marginalModelPlots(m3)
-```
-
-Tras realizar las mejoras vemos que el modelo reduce el residual estandard deviation. De manera que mejora el modelo.
+Como podemos ver en el summary las variables espeed, Tolls_amount y dist_haversine, debido a su p_value deberían ser eliminadas del modelo ya que este es muy superior a 0.05, es decir que no aportan información significativa al mismo. Aún así, vemos que el modelo con el logaritmo del importe total solo explica una variabilidad de cerca del 43'43%. probaremos a eliminar del modelo las variables mencionadas pero esto como mucho mantendrá la explicación de la variabilidad del target.
 
 ```{r}
-BIC(m,m2,m3)
+m4 <- lm( log(Total_amount) ~  tlenkm + Fare_amount + espeed + Tip_amount, data=df)
+summary(m4)
+Anova(m4) 
+vif(m4)
+marginalModelPlots(m4)
 ```
-Si calculamos Akaike en los modelos, vemos también que el último modelo es mejor en comparación a los otros.
-A pesar de que el tercer modelo es el mejor, no creimos oportuno elegirlo como representatne ya que la distancia en km tiene una relación inversamente proporcional respecto al Total amount. Es por eso que seguimos trabajando con el primer modelo.
+
+Tras realizar las mejoras vemos que el modelo reduce el residual estandard error respecto a m1.Aún así seguimos teniendo en el modelo m1 una mejor explicación de la variabilidad del target, lo que resulta en un mejor modelo del mismo.
+
+Además vemos como gracias al plot del marginalModel como todas las predicciones de color azul ya no siguen la distribución del modelo lo que nos hace descartar estas transformaciones.
+
+```{r}
+BIC(m1,m2,m4)
+```
+Si calculamos Akaike en los modelos, vemos también que m1 es mejor en comparación a los otros.
+
 
 ```{r}
 library(MASS)
 par(mfrow=c(1,2))
-boxcox(Total_amount ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
-    lpep_pickup_time + distHaversine,data=df)
-boxcox(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
-    lpep_pickup_time + distHaversine,data=df)
+boxcox(Total_amount ~  tlenkm + Fare_amount + espeed + Tip_amount + Tolls_amount +  distHaversine,data=df)
 par(mfrow=c(1,1))
 ```
-Si aplicammos una Box-Cox power transformation a nuestros datos, vemos que con el primer modelo tiene un parametro inferior a 1, lo que sugiere que debemos aplicar alguna transformación, como una raiz cuadrada, a nuestra variable objetivo.
-
-
-
+Si aplicammos una Box-Cox power transformation a nuestros datos, vemos que con el primer modelo tiene un parametro inferior a 1 pero casi igual, lo que sugiere que no deberíamos aplicar ninguna transformación, o como mucho probar con una raíz cuadrada ya que ya hemos descartado el logaritmo.
 ```{r}
-m4<-lm(sqrt(Total_amount) ~  poly(tlenkm,2) + Fare_amount + espeed + Tip_amount + Tolls_amount + 
-    lpep_pickup_time + distHaversine,data=df)
+m4<-lm(sqrt(Total_amount) ~  tlenkm + Fare_amount + espeed + Tip_amount + Tolls_amount+ distHaversine,data=df)
 summary(m4)
+summary(m1)
 Anova(m4) 
 vif(m4)
 par(mfrow=c(2,2))
 plot( m4, id.n=0 )
+residualPlots(m4)
 par(mfrow=c(1,1))
 plot
-#marginalModelPlots(m4)
+marginalModelPlots(m4)
+names(df)
 ```
 
-Como vemos hemos conseguido que la variable numérica tlenkm tenga forma de parávola convexa, de manera que si aumenta la distancia recorrida aumenta el Total amount. También podemos observar que las otras variables se comportan de manera similar similar a la variable numérica tlenkm pero de forma lineal. En contraposición la variable espeed es inversamente proporcional respecto al total amount, eso es debido a que si aumentamos la velocidad llegamos antes a los puntos y por lo tanto el taximetro cuenta menos tiempo recorrido.
+Al probar de aplicar la raíz cuadrada a la variable Total_amount vemos como la explicación de la variabilidad se reduce a 93.39%, lo que al haber complicado el modelo, nos indicaría no escogerlo como óptimo. Además vemos que para el residualplots las predicciones dejan de ajustarse a sus smoother creando patrones de términos cuadráticos, consequencia de haber aplicado la raíz en el target. 
+
+Una vez aplicado en vif, por eso, vemos como Fare_amount y distHaversine están claramente correlacionadas así que probaremos a descartar una de ellas en el siguiente modelo.
+```{r}
+m5<-lm(Total_amount ~  tlenkm + espeed + Tip_amount + Tolls_amount+ distHaversine,data=df)
+summary(m5)
+m6<-lm(Total_amount ~  tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amount,data=df)
+summary(m6)
+summary(m1)
+anova(m6,m1)
+marginalModelPlots(m6)
+residualPlots(m6)
+residualPlots(m1)
+```
+Provamos primero a descartar el Fare_amount debido a que estará muy relacionada con nuestro target, pero vemos como sufrimos un descenso considerable hasta 85.55% de la explicación de la variabilidad por el modelo. En cambio, al quitar el distHaversine solo vemos un descenso de 96.62% a 96.59% reduciendo el uso de una variable respecto al modelo m1. Aplicando anova vemos como és buena opción escoger este nuevo modelo como óptimo. 
 
 ```{r}
-summary(resid(m4))
-sel1<-Boxplot(rstudent(m4));sel1 # sel1 already contains row numbers
-# ll1<-which(row.names(df) %in% names(rstudent(m25)[sel1]));ll1
-sel2<-which(hatvalues(m4)>6*length(m4$coefficients)/nrow(df));sel2;length(sel2) # sel2 contains row names
-ll2<-which(row.names(df) %in% names(hatvalues(m4)[sel2]));ll2
-sel3<-which(abs(cooks.distance(m4))>4/(nrow(df)-length(m4$coefficients)));sel3;length(sel3)
-ll3<-which(row.names(df) %in% names(cooks.distance(m4)[sel3]));ll3
-# sel4<-Boxplot(cooks.distance(m25));sel4  # sel4 already contains row numbers
-sel3<-which((cooks.distance(m4))>0.1);sel3;length(sel3)# sel3 contains row names
-ll3<-which(row.names(df) %in% names(cooks.distance(m4)[sel3]));ll3
+m7<-lm(Total_amount ~  f.tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amount,data=df)
+summary(m7)
+m8<-lm(Total_amount ~  tlenkm +f.Fare_amount + espeed + Tip_amount + Tolls_amount,data=df)
+summary(m8)
+BIC(m6,m7,m8)
+```
+Provamos a cambiar la variable tlenkm por su factor obteniendo una explicación de la variabilidad muy similar, aún así, el método BIC nos indica que sigue siendo mejor el modelo anterior siendo su BIC menor.Y la misma argumentación podemos aplicar para el uso del factor de Fare_amount aunque este si que muestra un descenso significativo de la explicación de la variabilidad del target.
 
-influencePlot(m4,id=list(method="noteworthy", n=5, cex=0.5))
+
+##Efectes Nets
+
+```{r}
+par(mfrow=c(2,2))
+plot( m6, id.n=0 )
+residualPlots(m6)
+par(mfrow=c(1,1))
+
+```
+Seguimos sin disponer de unos residuos normales, aún así, a excepción de los extremos que distan significativamente, la mayoría de residuos siguen esta distribución.Estos residuos no normales pueden deberse al porcentaje de explicación que le falta a nuestro modelo de la variación de todo el target.
+
+Es cierto que podemos observar un pequeño desajuste respecto a los smoothers del residualPlots pero no son lo suficientemente significativos.
+
+```{r}
+library(effects)
+plot(allEffects(m6))
+```
+
+Analizamos como funcionan las variables de nuestro modelo respecto a nuestro target.
+
+Que a medida que aumenten tanto la distacia en km como el número de peajes así como la tarifa aumente la quantía total del servicio parece ser coherente por como funciona la composición de esta. También podemos llegar a entender que cuanta más propina ofrezca un cliente, más acabará pagando. 
+
+La explicación no tan trivial es la de la velocidad efectiva. Se puede justificar esta relación inversa con el hecho de que cuanto más lento vaya el taxi, más tiempo estará produciendo el servicio y por tanto más acabará cobrando. Esto sucede sobretodo en los núcleos urbanos, donde el tiempo predomina frente a la distancia en cuanto al cómputo del precio del transporte.
+
+
+```{r}
+sel1<-Boxplot(rstudent(m6));sel1
+influencePlot(m6,id=list(method="noteworthy", n=5))
+
+```
+En el primer boxplot podemos observar las observaciones que consideraríamos outlier con una distribución rstudent, que debido a nuestro número de observaciones es equivalente a considerar una normal.
+Con el segundo plot podemos observar los individuos inusuales y ver si són o no influentes. Podríamos destacar sobretodo el 2445 al tener un residuo estandarizado negativo y por otro lado, al parecer bastante influyentes, el 3044,543, 2183 y 4678 así como 322.
+
+
+
+
+
+
+
+```{r}
+summary(resid(m6))
+sel1<-Boxplot(rstudent(m6));sel1 # sel1 already contains row numbers
+# ll1<-which(row.names(df) %in% names(rstudent(m25)[sel1]));ll1
+sel2<-which(hatvalues(m6)>6*length(m6$coefficients)/nrow(df));sel2;length(sel2) # sel2 contains row names
+ll2<-which(row.names(df) %in% names(hatvalues(m4)[sel2]));ll2
+sel3<-which(abs(cooks.distance(m6))>4/(nrow(df)-length(m6$coefficients)));sel3;length(sel3)
+ll3<-which(row.names(df) %in% names(cooks.distance(m6)[sel3]));ll3
+# sel4<-Boxplot(cooks.distance(m25));sel4  # sel4 already contains row numbers
+sel3<-which((cooks.distance(m6))>0.1);sel3;length(sel3)# sel3 contains row names
+ll3<-which(row.names(df) %in% names(cooks.distance(m6)[sel3]));ll3
+
+influencePlot(m6,id=list(method="noteworthy", n=5))
 with(df,tapply(Total_amount,RateCodeID,summary))
 ```
 
