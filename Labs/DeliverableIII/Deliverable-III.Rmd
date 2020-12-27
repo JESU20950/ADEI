@@ -39,11 +39,7 @@ rm(list=ls())
 #filepath<-"C:/Users/carle/Desktop/ADEI2/"
 
 
-#setwd("~/Desktop/ADEI/Labs/DeliverableIII")
-#<<<<<<< HEAD
-#setwd("C:/Users/jesus/Desktop/ADEI/Labs/DeliverableIII")
-#=======
-#>>>>>>> a02eb430863f78229c4b7b5ce3c3bca0e4ae59be
+setwd("~/Desktop/ADEI/Labs/DeliverableIII")
 df <- read.table("Deliverable1.csv",header=T, sep=",");
 summary(df)
 ```
@@ -126,11 +122,9 @@ Como podemos ver el modelo tiene una explicatividad del 96'63% de la variabilida
 ```{r}
 vif(m)  # Check association between explanatory vars
 ```
-<<<<<<< HEAD
-A partir de al variance inflation factors vemos la asociacion entre las variables explicativas. Podemos observar que las variables tlenkm, Fare amount y la distancia Haversine están muy correlacionadas. También podemos ver que la distancia fare amount y la distancia Haversine tienen un valor similar de inflacción.
-=======
+
 A partir de la variance inflation factors vemos la asociacion entre las variables explicativas. Podemos observar que las variables tlenkm, Fare amount y la distancia Haversine están muy correlacionadas. También podemos ver que la distancia fare amount y la distancia Haversine tienen un valor similar de inflacción lo que nos hace creer que hay una gran relación entre ellas.
->>>>>>> a02eb430863f78229c4b7b5ce3c3bca0e4ae59be
+
 
 Tras haber analizado todas las variables que no aportaban mucho en el modelo decidimos eliminar las variables passenger count y el traveltime de este ya que eran las dos primeras variables que elimina el vif y las rechazadas por la hipotesi nula. Podriamos eliminar la variable Fare_amount, ya que practicamente la misma que nuestro target, sin embargo decidimos no eliminarla. Aún así esperaremos a ver los resultados que nos muestra el step para acabar de concretar si eliminamos del modelo alguna otra variable.
 
@@ -345,6 +339,24 @@ Si intentemos categorizar todas aquellas variables que en el modelo del apartado
 
 A pesar de todo hemos considerado no oportuno utilizar este modelo debido a la mínima diferencia de BIC así como en cuanto a la explicación de la variablilidad que, si bien aumenta, no consideramos que lo suficiente como para justificar la complejidad añadida al modelo. Al no observar ninguna transformación que mejore sustancialmente el modelo tampoco consideramos hacer una combinación de las mismas.
 
+```{r}
+vars_cexp_cat <- c("f.Improvement_surcharge","f.MTA_tax", "Trip_type", "RateCodeID","lpep_pickup_period", "VendorID", "lpep_pickup_date",  "f.Extra")
+
+m10<-lm(Total_amount~. ,family="binomial",data=df[,c("Total_amount", vars_cexp_cat)])
+vif(m10)
+Anova(m10)
+step(m10, k=log(nrow(df)))
+m11<- lm(Total_amount ~  tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amount + Trip_type +RateCodeID  ,data=df)
+summary(m11)
+vif(m11)
+step(m11, k=log(nrow(df)))
+```
+
+También intentamos añadir algunas variables categoricas en el modelo. Como resultado nos dio que las variables categoricas Trip_Type y RateCodeID funcionan bien en el modelo de predicción. Si unimos nuestro mejor modelo del apartado anterior junto con dichas variables nos da que la explicación de la variabilidad del target es del 96.61%. 
+
+A pesar de todo hemos considerado no oportuno utilizar este modelo debido a la mínima diferencia de BIC así como en cuanto a la explicación de la variablilidad que, si bien aumenta, no consideramos que lo suficiente como para justificar la complejidad añadida al modelo. Al no observar ninguna transformación que mejore sustancialmente el modelo tampoco consideramos hacer una combinación de las mismas.
+
+
 #Efectos Limpios
 ```{r}
 anova(m6a,m6f)
@@ -375,50 +387,29 @@ Como bién llevamos diciendo durante todo el tratamiento de modelos, este aument
 
 # Interactiones
 ```{r}
-m9<-lm(Total_amount ~  f.tlenkm +Fare_amount + f.espeed + Tip_amount + Tolls_amount,data=df)
-summary(m9)
+m9a<- lm(Total_amount ~  (tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amount) + (Trip_type +RateCodeID)^2 ,data=df) # Interaccions dobles en factors
+m9a<-step(m9a, k=log(nrow(df)))
+m9b<- lm(Total_amount ~  (tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amount) * (Trip_type +RateCodeID)  ,data=df) # Interaccions dobles en factor-numèrica
+m9b<-step(m9b, k=log(nrow(df)))
 
-m9a<-lm(Total_amount ~  f.tlenkm*(Fare_amount + f.espeed + Tip_amount + Tolls_amount),data=df)
+BIC(m6,m11,m9a,m9b)
+
 summary(m9a)
-m9aa<-step( m9a, k=log(nrow(df)))
-
-m9b<-lm(Total_amount ~  f.tlenkm*f.espeed + Fare_amount + Tip_amount + Tolls_amount,data=df)
 summary(m9b)
-m9ba<-step( m9b, k=log(nrow(df)))
-
-m9c<-lm(Total_amount ~  Fare_amount*(f.tlenkm + f.espeed + Tip_amount + Tolls_amount),data=df)
-summary(m9c)
-m9ca<-step( m9c, k=log(nrow(df)))
-summary(m9ca)
-
-m9d<-lm(Total_amount ~  Tip_amount*( Fare_amount+f.tlenkm + f.espeed+ Tolls_amount),data=df)
-summary(m9d)
-m9da<-step( m9d, k=log(nrow(df)))
-
-m9e<-lm(Total_amount ~  Tolls_amount*( Fare_amount+f.tlenkm + f.espeed + Tip_amount),data=df)
-summary(m9e)
-m9ea<-step( m9e, k=log(nrow(df)))
-
-
-BIC(m6,m9,m9a,m9b,m9c,m9ca,m9d,m9da,m9e,m9ea)
-
-summary(m9ca)
-summary(m9da)
-summary(m9ea)
 
 par(mfrow=c(2,2))
 influencePlot(m6)
-influencePlot(m9ca)
+influencePlot(m9b)
 
-ll1<-Boxplot(rstudent(m9ca));ll1
-sel2<-which(hatvalues(m9ca)>5*length(m9ca$coefficients)/nrow(df));sel2;length(sel2)
-ll2<-which(row.names(df) %in% names(hatvalues(m9ca)[sel2]));ll2
-sel3<-which(cooks.distance(m9ca)> 0.5 );sel3;length(sel3)
-ll3<-which(row.names(df) %in% names(cooks.distance(m9ca)[sel3]));ll3
+ll1<-Boxplot(rstudent(m9b));ll1
+sel2<-which(hatvalues(m9b)>5*length(m9b$coefficients)/nrow(df));sel2;length(sel2)
+ll2<-which(row.names(df) %in% names(hatvalues(m9b)[sel2]));ll2
+sel3<-which(cooks.distance(m9b)> 0.5 );sel3;length(sel3)
+ll3<-which(row.names(df) %in% names(cooks.distance(m9b)[sel3]));ll3
 
 
 ```
-```
+
 Para analizar las interacciones que pueden hacer mejorar nuestro modelo, consideramos el modelo m9 al disponer de dos variables factor necesarias por las especificaciones del report.
 
 Después de aplicar una serie de interacciones entre factores así como entre numéricas y factores, vemos como aparecen 3 modelos con un BIC inferior a nuestro modelo sin interacciones m9, los cuales serían, en orden de mejor a peor, el m9ca,m9da y m9ea.
@@ -426,4 +417,250 @@ Después de aplicar una serie de interacciones entre factores así como entre nu
 Aún así la mejora que obtenemos al aplicar estas interacciones no es lo suficientemente significativa como para justificar el aumento de complejidad  del modelo, así que como modelo principal seguiremos usando el m6.
 
 Aquí podemos ver una comparación de las observaciones inusuales tanto de nuestro modelo como del que hemos escogido con interacciones(m9ca) y vemos como son bastante similares a excepción del individuo 322 que pasa a ser mucho más influyente en el modelo con interacciones. Aún así no hay una gran diferencia entre los demás individuos influyentes como para considerarlo mejor o peor por ello.
-    
+
+
+# Statistical Modelling
+
+## Load Processed data
+
+```{r, echo=FALSE, results='FALSE'}
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+#setwd("C:/Users/carle/Desktop/ADEI2")
+#filepath<-"C:/Users/carle/Desktop/ADEI2/"
+
+
+setwd("C:/Users/jesus/Desktop/ADEI/Labs/DeliverableIII")
+df <- read.table("Deliverable1.csv",header=T, sep=",");
+
+```
+
+## Modify Data
+```{r}
+vars_dis <- c("VendorID", "Payment_type", "Store_and_fwd_flag",  "RateCodeID", "f.Extra", "f.MTA_tax", "f.Improvement_surcharge", "lpep_pickup_period", "Trip_type", "lpep_pickup_date", "multiouts", "f.espeed", "f.tlenkm", "f.traveltime", "f.distHaversine", "AnyToll", "f.Fare_amount", "f.Passenger_count", "f.Total_amount")
+
+vars_con <- c( "Passenger_count", "tlenkm", "Pickup_longitude", "Pickup_latitude", "Dropoff_longitude", "Dropoff_latitude","Fare_amount", "espeed", "Tip_amount", "Tolls_amount", "lpep_pickup_time", "traveltime", "distHaversine")
+for( i in vars_dis){
+  df[,i] <- as.factor(df[,i])
+}
+
+vars_res <- c("AnyTip", "Total_amount")
+
+d1 <- dim(df)[1]
+d2 <- dim(df)[2]
+df[,d2-1] <- as.factor(df[,d2-1])
+vars_cexp<-c("Passenger_count", "tlenkm", "Fare_amount", "espeed", "Tolls_amount", "lpep_pickup_time", "traveltime", "distHaversine")
+
+```
+
+
+# Binary Logitics Regression
+
+Explanatory variables numeric only
+
+*Target binary factor AnyTip*
+
+Para la realización del modelo, consideramos que la variable Tip_amount no estubiese como variable explicativa ya que la variable target AnyTip se calculaba a partir del Tip_amount.
+Decidimos seleccionar aquellos individuos que no pagaban en efectivo, ya que eran los unicos que tenian registrada la propina. Como consequencia la variable Payment_type se eliminaba como variable explicativa.
+Para poder realizar el estudio, un 70% de nuestro dataset formo parte del train dataset y el 30% formó parte del test dataset. Inicialmente consideramos como variables explicativas: Passenger_count, tlenkm, Fare_amount, espeed, Tolls_amount, lpep_pickup_time, traveltime y  distHaversine.
+
+```{r}
+# Split your sample: work and test
+l<-which(df$Payment_type=="f.PayType-Cash");
+dff<-df[-l,]
+set.seed(12345)
+l<-sample(1:nrow(dff),0.70*nrow(dff),replace=FALSE)
+l<-sort(l);
+train_dataset<-dff[l,]
+test_dataset<-dff[-l,]
+```
+
+# Use explanatory numeric variables
+
+
+```{r}
+m<-glm(AnyTip~.,family="binomial",data=train_dataset[,c("AnyTip",vars_cexp)])
+summary(m)
+Anova(m,test="Wald")
+vif(m)
+```
+Como podemos ver con el Anova las variables tlenkm, es la unica variable que rechaza la hipotesi nula y por lo tanto son las variables que tienen más asociación. Podriamos considerar que la variable distHaversine también esta asociada a la variable target ya que su Chisq es muy proximo al nivel de significancia 0.05. Hemos considerado que no hay problemas de multicolinearidad si el valor de VIF es inferior a 11.
+
+Como vemos que hay pocas variables explicativas asociadas con la variables target, intentaremos ampliar la lista de variables explicativas.
+
+```{r}
+res.cat <- catdes(train_dataset,num.var=which(names(df)=="AnyTip"))
+res.cat$quanti.var
+```
+Si realizamos un categorical description, vemos que las variables más correlacionadas con la variable target es el Pickup_longitude , el Dropoff_longitude  y el total amount. Como el Total amount es una variable target, hemos decidido no incluirla como variable explicativa, a pesar de todo, podría incluirse. 
+
+
+```{r}
+m2<-glm(AnyTip~tlenkm+Pickup_longitude+ Dropoff_longitude + distHaversine ,family="binomial",data=train_dataset)
+summary(m2)
+vif(m2)
+Anova(m2,test="Wald")
+```
+
+Si cogemos aquellas variables numericas que no fueron eliminadas por hipotesi del modelo anterior mas aquellas variables correlacionadas, vemos que eliminariamos todas las variables explicativas excepto el Pickup_longitude y distHaversine. A pesar de todo decidimos quedarnos con un modelo cuyas variables explicativas son Pickup_longitude, distHaversine y tlenkm.
+
+```{r}
+m3<-glm(AnyTip~tlenkm+Pickup_longitude + distHaversine ,family="binomial",data=train_dataset)
+summary(m3)
+```
+
+
+
+
+# Consider factors and interactions as explanatory variables
+
+```{r}
+m41<-glm(AnyTip~f.tlenkm+Pickup_longitude + distHaversine ,family="binomial",data=train_dataset)
+m42<-glm(AnyTip~tlenkm+Pickup_longitude + f.distHaversine ,family="binomial",data=train_dataset)
+summary(m41)
+summary(m42)
+BIC(m3,m41,m42)
+```
+
+Si intentemos categorizar todas aquellas variables del modelo del apartado anterior. Observamos que el modelo empeora por lo tanto, no utilizaremos la categorización de las variables numericas.
+
+```{r}
+res.cat <- catdes(df,num.var=which(names(df)=="AnyTip"))
+res.cat$test.chi2
+```
+
+```{r}
+vars_cexp_cat <- c("f.Improvement_surcharge","f.MTA_tax", "Trip_type", "RateCodeID","lpep_pickup_period", "VendorID", "lpep_pickup_date",  "f.Extra")
+
+m5<-glm(AnyTip~. ,family="binomial",data=train_dataset[,c("AnyTip", vars_cexp_cat)])
+vif(m5)
+
+```
+Si vemos la multicolinealidad de las variables más coleracionadas con el target, nos encontramos que las variables f.Improvement_surcharge, f.MTA_tax, Trip_Type y RateCodeID tienen un valor GVIF muy alto. Es por eso que de todas esas variables vamos a quedarnos solo con f.MTA_tax.
+
+```{r}
+m6<-glm(AnyTip~(f.MTA_tax+lpep_pickup_period+VendorID+lpep_pickup_date+f.Extra),family="binomial",data=train_dataset)
+vif(m6)
+Anova(m6,test="Wald")
+```
+
+Como podemos observar, las unicas variables categoricas que han pasado el test de la Chisq son f.MTA_tax y lpep_pickup_period. A pesar de todo, la variable f.Extra esta cerca del 0.05 por lo tanto la consideraremos para el estudio.
+
+```{r}
+m6<-glm(AnyTip~f.MTA_tax+lpep_pickup_period+f.Extra,family="binomial",data=train_dataset)
+step(m6, k=log(nrow(df)))
+summary(m6)
+```
+Si utilizamos la funcion step de R nos menciona que deberíamos eliminar la variable f.Extra y lpep_pickup_period. A pesar de todo, vamos a mantener todas las variables explicativas. El resultado que nos da es de AIC 1380.3
+
+
+
+
+
+
+```{r}
+m7<-glm(AnyTip~ (tlenkm+Pickup_longitude+distHaversine)+(f.MTA_tax+lpep_pickup_period+f.Extra), family="binomial", data=train_dataset)
+m71<-glm(AnyTip~ (poly(tlenkm,2)+Pickup_longitude+distHaversine)+(f.MTA_tax+lpep_pickup_period+f.Extra), family="binomial", data=train_dataset)
+vif(m7)
+vif(m71)
+Anova(m7,test="Wald")
+Anova(m71,test="Wald")
+```
+Si intenamos unir las variables numericas explicativas y las variables categoricas explicativas, nos sale que las variables numericas tlenkm y distHaversine deben eliminarse. Pero si intenamos hacer el polinomio ortogonal de base 2 respecto a la variable tlenkm, nos sale que solo debemos eliminar la variable distHaversine. 
+
+```{r}
+m8<-glm(AnyTip~ (poly(tlenkm,2)+Pickup_longitude)+(f.MTA_tax+lpep_pickup_period+f.Extra), family="binomial", data=train_dataset)
+m82<-glm(AnyTip ~ (poly(tlenkm,2)+Pickup_longitude)+(f.MTA_tax+lpep_pickup_period+f.Extra)^2, family="binomial", data=train_dataset) # Interaccions dobles en factors
+m83<-glm(AnyTip ~ (poly(tlenkm,2)+Pickup_longitude)*(f.MTA_tax+lpep_pickup_period+f.Extra), family="binomial", data=train_dataset)  # Interaccions dobles en factor-numèrica
+
+BIC(m8,m82,m83)
+m90 <- m8
+```
+
+Si intentamos comparar el modelo normal con el modelo con interacción doble en factor y el modelo con interacciçon doble en factor-numèrica, observamos que los modelos empeorán. Por lo tanto, seguiremos con el modelo normal. 
+
+# Final Diagnostics
+
+# Boxplot dels residus
+```{r}
+Boxplot(rstudent(m90),id.n=15)
+sout<-which(abs(rstudent(m90))>2.25);length(sout)
+llout<-which(row.names(train_dataset) %in% names(rstudent(m90)[sout]));llout
+```
+
+Como podemos ver, en total encontramos 13 individuos que tienen como residuo un valor superior a 2.25.
+# Observacions potencialment influents
+```{r}
+quantile(hatvalues(m90),seq(0,1,0.1))
+mean(hatvalues(m90))
+hh<-5*mean(hatvalues(m90));hh
+shat<-which(hatvalues(m90)>hh);length(shat);shat
+llhat<-which(row.names(train_dataset) %in% names(rstudent(m90)[shat]));llhat
+```
+En total encontramos que 48 individuos son potencialmente influentes.
+
+# Influent data
+
+```{r}
+Boxplot(cooks.distance(m90))
+
+scoo<-which(cooks.distance(m90)>0.02);length(scoo);scoo
+llcoo<-which(row.names(train_dataset) %in% names(cooks.distance(m90)[scoo]));llcoo
+
+llista<-influencePlot(m90,id=c(list="noteworthy",n=10))
+influencePlot(m90,id=c(list="noteworthy",n=10))
+attributes(llista)
+influenceIndexPlot(m90)
+train_dataset[llcoo,]
+
+llfora1<-row.names(llista);llfora1;length(llfora1)
+ll<-which(row.names(train_dataset)%in%llfora1);ll;length(ll)
+df1<-train_dataset[-ll,]
+```
+
+En total encontramos que 22 individuos son influentes.
+
+
+```{r}
+m10<-glm(AnyTip~ (poly(tlenkm,2)+Pickup_longitude)+(f.MTA_tax+lpep_pickup_period+f.Extra), family="binomial", data=df1)
+m101<-glm(AnyTip ~ (poly(tlenkm,2)+Pickup_longitude)+(f.MTA_tax+lpep_pickup_period+f.Extra)^2, family="binomial", data=df1) # Interaccions dobles en factors
+m102<-glm(AnyTip ~ (poly(tlenkm,2)+Pickup_longitude)*(f.MTA_tax+lpep_pickup_period+f.Extra), family="binomial", data=df1)  # Interaccions dobles en factor-numèrica
+
+BIC(m10,m101,m102)
+
+```
+
+Si volvemos a recalcular el modelo observamos que el modelo cuya formula es un sumatorio, sigue siendo el mejor modelo para nuestros datos.
+
+```{r}
+plot(allEffects(m10))
+```
+Si intentamos entender el modelo, vemos que si aumenta la distancia recorrida en km o aumenta el valor Pickup_longitude disminuye la probabilidad de dar propina. Si se paga taxa entonces la probabilidad de dar propina es muy alta y si no se paga taxas entonces la probabilidad de no dar propinas es muy alta.
+
+```{r}
+marginalModelPlots(m10)
+```
+
+Si vemos el marginal model plot, vemos que la linea de los modelos se ajusta más o menos a la linea de los datos, por cada una de las variables.
+
+```{r}
+residualPlots(m10)
+```
+Si vemos los residuos nos encontramos que en el plot de Linear Predictor - Pearson residuals vemos como la linea de smoother es inclinado por lo tanto tenemos desajuste en el modelo. 
+
+
+
+# Confussion Table
+
+```{r}
+count <- summary(df1$AnyTip)
+count/sum(count)
+fit.AnyTip<-factor(ifelse(predict(m10,type="response")<0.5,0,1),labels=paste("Prediction-AnyTip",c("No","Yes")))
+tt<-table(fit.AnyTip,df1$AnyTip);tt
+100*sum(diag(tt))/sum(tt)
+```
+Como podemos ver nuestro modelo tiene una precisión del 87.23157. A pesar de todo, no es un modelo totalmente correcto ya que podemos podemos ver como en nuestro dataset hay más individuos con AnyTip Yes que con AnyTip No, por lo tanto nuestro dataset está desbalanceado. Además podemos ver que nuestro modelo tiene una tendencia a predecir siempre que el individuo da propinas, probablemente causado por el desbalance del dataset.
