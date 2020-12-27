@@ -1,10 +1,10 @@
 ---
 title: "Deliverable-III"
 output:
-  pdf_document:
+  word_document:
     toc: no
     toc_depth: '4'
-  word_document:
+  pdf_document:
     toc: no
     toc_depth: '4'
 editor_options: 
@@ -39,7 +39,7 @@ rm(list=ls())
 #filepath<-"C:/Users/carle/Desktop/ADEI2/"
 
 
-setwd("~/Desktop/ADEI/Labs/DeliverableIII")
+#setwd("~/Desktop/ADEI/Labs/DeliverableIII")
 df <- read.table("Deliverable1.csv",header=T, sep=",");
 summary(df)
 ```
@@ -158,6 +158,7 @@ Si observamos los residuos encontramos algun valor negativo y varios valores fue
 Transformations
 
 ```{r}
+par(mfrow=c(2,2))
 residualPlots(m1)
 m2 <-lm(Total_amount ~  tlenkm + Fare_amount + espeed + Tip_amount + poly(Tolls_amount,2) + distHaversine,data=df)
 summary(m2)
@@ -401,6 +402,7 @@ par(mfrow=c(2,2))
 influencePlot(m6)
 influencePlot(m12)
 influencePlot(m13)
+par(mfrow=c(1,1))
 
 ll1<-Boxplot(rstudent(m6));ll1
 sel2<-which(hatvalues(m6)>5*length(m6$coefficients)/nrow(df));sel2;length(sel2)
@@ -413,7 +415,7 @@ sel2<-which(hatvalues(m13)>5*length(m13$coefficients)/nrow(df));sel2;length(sel2
 ll2<-which(row.names(df) %in% names(hatvalues(m13)[sel2]));ll2
 sel3<-which(cooks.distance(m13)> 0.5 );sel3;length(sel3)
 ll3<-which(row.names(df) %in% names(cooks.distance(m13)[sel3]));ll3
-
+influencePlot(m13,id=list(method="noteworthy", n=5))
 
 ```
 
@@ -440,9 +442,11 @@ rm(list=ls())
 #setwd("C:/Users/carle/Desktop/ADEI2")
 #filepath<-"C:/Users/carle/Desktop/ADEI2/"
 
-
-setwd("C:/Users/jesus/Desktop/ADEI/Labs/DeliverableIII")
+#setwd("~/Desktop/ADEI/Labs/DeliverableIII")
 df <- read.table("Deliverable1.csv",header=T, sep=",");
+
+#setwd("C:/Users/jesus/Desktop/ADEI/Labs/DeliverableIII")
+#df <- read.table("Deliverable1.csv",header=T, sep=",");
 
 ```
 
