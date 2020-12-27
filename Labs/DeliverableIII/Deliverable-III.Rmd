@@ -309,7 +309,7 @@ with(df,tapply(Total_amount,RateCodeID,summary))
 # Using factors as explanatory variables
 ## Try to change numerical each regressor by its discretized factor
 
-En este apartado se explica los diferentes factores que podrían ser utilizados para obtener un modelo lineal. Para ello, miraremos si nuestro modelo de apartado anterior, que trataba solo con variables numericas explicativas mejora añadiendo algunas variables categoricas explicativas.
+
 
 ```{r}
 m6<-lm(Total_amount ~  tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amount,data=df)
@@ -335,7 +335,7 @@ summary(m6)
 
 ```  
 
-Si intentemos categorizar todas aquellas variables que en el modelo del apartado anterior nos da resultado. Observamos que el único modelo que da mejor el resultado es aquel con la variable Fare_amount en la que se aplica un polinomio de segundo grado. 
+Si intentemos realizar transformaciones en todas aquellas variables que en el modelo del apartado anterior nos da resultado. Observamos que el único modelo que da mejor el resultado es aquel con la variable Fare_amount en la que se aplica un polinomio de segundo grado. 
 
 A pesar de todo hemos considerado no oportuno utilizar este modelo debido a la mínima diferencia de BIC así como en cuanto a la explicación de la variablilidad que, si bien aumenta, no consideramos que lo suficiente como para justificar la complejidad añadida al modelo. Al no observar ninguna transformación que mejore sustancialmente el modelo tampoco consideramos hacer una combinación de las mismas.
 
@@ -387,36 +387,43 @@ Como bién llevamos diciendo durante todo el tratamiento de modelos, este aument
 
 # Interactiones
 ```{r}
-m9a<- lm(Total_amount ~  (tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amount) + (Trip_type +RateCodeID)^2 ,data=df) # Interaccions dobles en factors
-m9a<-step(m9a, k=log(nrow(df)))
-m9b<- lm(Total_amount ~  (tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amount) * (Trip_type +RateCodeID)  ,data=df) # Interaccions dobles en factor-numèrica
-m9b<-step(m9b, k=log(nrow(df)))
+m12<- lm(Total_amount ~  (tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amount) + (Trip_type +RateCodeID)^2 ,data=df) # Interaccions dobles en factors
+m12<-step(m12, k=log(nrow(df)))
+m13<- lm(Total_amount ~  (tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amount) * (Trip_type +RateCodeID)  ,data=df) # Interaccions dobles en factor-numèrica
+m13<-step(m13, k=log(nrow(df)))
 
-BIC(m6,m11,m9a,m9b)
+BIC(m6,m11,m12,m13)
 
-summary(m9a)
-summary(m9b)
+summary(m12)
+summary(m13)
 
 par(mfrow=c(2,2))
 influencePlot(m6)
-influencePlot(m9b)
+influencePlot(m12)
+influencePlot(m13)
 
-ll1<-Boxplot(rstudent(m9b));ll1
-sel2<-which(hatvalues(m9b)>5*length(m9b$coefficients)/nrow(df));sel2;length(sel2)
-ll2<-which(row.names(df) %in% names(hatvalues(m9b)[sel2]));ll2
-sel3<-which(cooks.distance(m9b)> 0.5 );sel3;length(sel3)
-ll3<-which(row.names(df) %in% names(cooks.distance(m9b)[sel3]));ll3
+ll1<-Boxplot(rstudent(m6));ll1
+sel2<-which(hatvalues(m6)>5*length(m6$coefficients)/nrow(df));sel2;length(sel2)
+ll2<-which(row.names(df) %in% names(hatvalues(m6)[sel2]));ll2
+sel3<-which(cooks.distance(m6)> 0.5 );sel3;length(sel3)
+ll3<-which(row.names(df) %in% names(cooks.distance(m6)[sel3]));ll3
+
+ll1<-Boxplot(rstudent(m13));ll1
+sel2<-which(hatvalues(m13)>5*length(m13$coefficients)/nrow(df));sel2;length(sel2)
+ll2<-which(row.names(df) %in% names(hatvalues(m13)[sel2]));ll2
+sel3<-which(cooks.distance(m13)> 0.5 );sel3;length(sel3)
+ll3<-which(row.names(df) %in% names(cooks.distance(m13)[sel3]));ll3
 
 
 ```
 
-Para analizar las interacciones que pueden hacer mejorar nuestro modelo, consideramos el modelo m9 al disponer de dos variables factor necesarias por las especificaciones del report.
+Para analizar las interacciones que pueden hacer mejorar nuestro modelo, consideramos el modelo m6 y m11 al disponer este último de las variables categóricas necesarias.
 
-Después de aplicar una serie de interacciones entre factores así como entre numéricas y factores, vemos como aparecen 3 modelos con un BIC inferior a nuestro modelo sin interacciones m9, los cuales serían, en orden de mejor a peor, el m9ca,m9da y m9ea.
+Después de aplicar una serie de interacciones entre factores así como entre numéricas y factores, vemos como aparecen los dos modelos con un BIC inferior a nuestro modelo sin interacciones m11, donde el m13 presenta una mejora sustancial en cuanto a su AIC.
 
-Aún así la mejora que obtenemos al aplicar estas interacciones no es lo suficientemente significativa como para justificar el aumento de complejidad  del modelo, así que como modelo principal seguiremos usando el m6.
+Aún así la mejora que obtenemos al aplicar estas interacciones no es lo suficientemente significativa como para justificar el aumento de complejidad  del modelo, así que como modelo principal seguiremos usando el m6 ya que como dijimos, el m11 lo descartamos por el mismo motivo producido por las variables extra.
 
-Aquí podemos ver una comparación de las observaciones inusuales tanto de nuestro modelo como del que hemos escogido con interacciones(m9ca) y vemos como son bastante similares a excepción del individuo 322 que pasa a ser mucho más influyente en el modelo con interacciones. Aún así no hay una gran diferencia entre los demás individuos influyentes como para considerarlo mejor o peor por ello.
+Aquí podemos ver una comparación de las observaciones inusuales tanto de nuestro modelo como del que hemos escogido con interacciones(m13) y vemos como el modelo m13 presenta talvez menos individuos inusuales aún así acaba presentando el doble(8) de individuos significativos que en el modelo m6 destacando : 322  414 1737 2183 2793 3044 4073 4678. Sobretodo vemos como el individuo 322 ha pasado a ser mucho más influyente en este nuevo modelo, aún así no hay una gran diferencia entre los demás individuos influyentes como para considerarlo mejor o peor por ello.
 
 
 # Statistical Modelling
