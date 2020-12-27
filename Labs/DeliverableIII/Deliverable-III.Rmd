@@ -331,7 +331,7 @@ m6e <-lm(Total_amount ~  tlenkm +Fare_amount + +espeed + Tip_amount + poly(Tolls
 
 BIC(m6,m6a,m6b,m6c,m6d,m6e)
 summary(m6b)
-```
+```  
 
 Si intentemos categorizar todas aquellas variables que en el modelo del apartado anterior nos da resultado. Observamos que el único modelo que da mejor el resultado es aquel con la variable  Fare_amount en la que se aplica un polinomio de segundo grado. A pesar de todo hemos considerado no oportuno utilizar este modelo debido a la mínima diferencia de BIC así como en cuanto a la explicación de la variablilidad que, si bien aumenta, no consideramos que lo suficiente como para justificar la complejidad añadida al modelo. Al no observar ninguna transformación que mejore sustancialmente el modelo tampoco consideramos hacer una combinación de las mismas.
 
