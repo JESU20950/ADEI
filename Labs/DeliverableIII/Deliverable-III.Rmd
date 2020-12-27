@@ -40,10 +40,10 @@ rm(list=ls())
 
 
 #setwd("~/Desktop/ADEI/Labs/DeliverableIII")
-<<<<<<< HEAD
-setwd("C:/Users/jesus/Desktop/ADEI/Labs/DeliverableIII")
-=======
->>>>>>> a02eb430863f78229c4b7b5ce3c3bca0e4ae59be
+#<<<<<<< HEAD
+#setwd("C:/Users/jesus/Desktop/ADEI/Labs/DeliverableIII")
+#=======
+#>>>>>>> a02eb430863f78229c4b7b5ce3c3bca0e4ae59be
 df <- read.table("Deliverable1.csv",header=T, sep=",");
 summary(df)
 ```
@@ -294,12 +294,8 @@ En el primer boxplot podemos observar las observaciones que consideraríamos out
 Con el segundo plot podemos observar los individuos inusuales y ver si són o no influentes. Podríamos destacar sobretodo el 2445 al tener un residuo estandarizado negativo y por otro lado, al parecer bastante influyentes, el 3044,543, 2183 y 4678 así como 322.
 
 
-
-
-##Efectes nets
-
-
 ```{r}
+plot(allEffects(m6))
 summary(resid(m6))
 sel1<-Boxplot(rstudent(m6));sel1 # sel1 already contains row numbers
 # ll1<-which(row.names(df) %in% names(rstudent(m25)[sel1]));ll1
@@ -323,62 +319,62 @@ En este apartado se explica los diferentes factores que podrían ser utilizados 
 
 ```{r}
 m6<-lm(Total_amount ~  tlenkm +Fare_amount + espeed + Tip_amount + Tolls_amount,data=df)
+
 m6a <-lm(Total_amount ~  poly(tlenkm,2) +Fare_amount + espeed + Tip_amount + Tolls_amount,data=df)
 m6b <-lm(Total_amount ~  tlenkm +poly(Fare_amount,2) + espeed + Tip_amount + Tolls_amount,data=df)
-m6c <-lm(Total_amount ~  tlenkm+ Fare_amount + +poly(espeed,2) + Tip_amount + Tolls_amount,data=df)
-m6d <-lm(Total_amount ~  tlenkm+ Fare_amount + +espeed + poly(Tip_amount,2) + Tolls_amount,data=df)
-m6e <-lm(Total_amount ~  tlenkm +Fare_amount + +espeed + Tip_amount + poly(Tolls_amount,2),data=df)
+m6c <-lm(Total_amount ~  tlenkm+ Fare_amount +poly(espeed,2) + Tip_amount + Tolls_amount,data=df)
+m6d <-lm(Total_amount ~  tlenkm+ Fare_amount +espeed + poly(Tip_amount,2) + Tolls_amount,data=df)
+m6e <-lm(Total_amount ~  tlenkm +Fare_amount +espeed + Tip_amount + poly(Tolls_amount,2),data=df)
 
-BIC(m6,m6a,m6b,m6c,m6d,m6e)
+m6f<-lm(Total_amount ~  poly(tlenkm,2) +poly(Fare_amount,2) +poly(espeed,2) + poly(Tip_amount,2) + poly(Tolls_amount,2),data=df)
+
+
+BIC(m6,m6a,m6b,m6c,m6d,m6e,m6f)
+summary(m6a)
 summary(m6b)
+summary(m6c)
+summary(m6d)
+summary(m6e)
+
+summary(m6f)
+summary(m6)
+
 ```  
 
-Si intentemos categorizar todas aquellas variables que en el modelo del apartado anterior nos da resultado. Observamos que el único modelo que da mejor el resultado es aquel con la variable  Fare_amount en la que se aplica un polinomio de segundo grado. A pesar de todo hemos considerado no oportuno utilizar este modelo debido a la mínima diferencia de BIC así como en cuanto a la explicación de la variablilidad que, si bien aumenta, no consideramos que lo suficiente como para justificar la complejidad añadida al modelo. Al no observar ninguna transformación que mejore sustancialmente el modelo tampoco consideramos hacer una combinación de las mismas.
+Si intentemos categorizar todas aquellas variables que en el modelo del apartado anterior nos da resultado. Observamos que el único modelo que da mejor el resultado es aquel con la variable Fare_amount en la que se aplica un polinomio de segundo grado. 
 
+A pesar de todo hemos considerado no oportuno utilizar este modelo debido a la mínima diferencia de BIC así como en cuanto a la explicación de la variablilidad que, si bien aumenta, no consideramos que lo suficiente como para justificar la complejidad añadida al modelo. Al no observar ninguna transformación que mejore sustancialmente el modelo tampoco consideramos hacer una combinación de las mismas.
+
+#Efectos Limpios
 ```{r}
-summary(m6)
+anova(m6a,m6f)
+anova(m6b,m6f)
+anova(m6c,m6f)
+anova(m6d,m6f)
+anova(m6e,m6f)
+Anova(m6f)
 ```
 
-<<<<<<< HEAD
-###FALTAN EFECTES NETS I BRUTS  
-=======
+Aplicando el método anova para comprobar los efectos limpios producidos por el nuevo modelo, obtenemos que el uso de polinomios de grado dos para todas las variables que forman el modelo són útiles para su construcción. Esto podemos comprobarlo con el método Anova.
 
+Aún así, vemos como las transformaciones que más mejoras aportan, aún siendo estas ínfimas, són las de aplicar el polinomio a las variables Fare_amount y Tolls_amount.
 
->>>>>>> d1603d6e2810c0dd4d67da0451e11db64ae67e69
-
+#Efectos Sucios
 ```{r}
-Anova(m35)
-summary(m35)
-model.matrix(m35)[1:12,]
-
-par(mfrow=c(2,2))
-plot( m35, id.n=0 )
-par(mfrow=c(1,1))
-
-influencePlot( m35, id=c(list="noteworthy",n=5))
-residualPlots( m35 )
-marginalModelPlots( m35 )
-
-ll1<-Boxplot(rstudent(m35));ll1
-# ll1<-which(row.names(df) %in% names(rstudent(m25)[sel1]));ll1
-df[ll1,]
-ll4 <- Boxplot( cooks.distance( m35 ));ll4
-ll4<-c(649, 4088)
-dfred<-df[-ll4,]
-
-# Outliers dels residus - Verticals - Cal suprimir-los: el model no pot explicar-los
-
-m36<-lm(log(Total_amount) ~ f.extra + Tip_amount + f.tolls+ f.scharge + f.speed + log(tlenkm)  ,data=dfred)
-summary(m36)
-Anova(m36)
-vif(m36)
-
+m0<-lm(Total_amount ~ 1,data=df)
+anova(m0,m6b)
+anova(m0,m6c)
+anova(m0,m6d)
+anova(m0,m6e)
+anova(m0,m6f)
 ```
 
+Como podemos ver debido al uso de los efectos sucios, rechazamos la hipótesi nula para todos los modelos que incluïan distintos usos del polinomio, por tanto, podemos confirmar que no se trata de modelos equivalentes y necesitamos la aplicación de estos modelos.
 
+Como bién llevamos diciendo durante todo el tratamiento de modelos, este aumento en la complejidad del modelo respecto a las ventajas que nos ofrece no nos parece justificable así que no llegaríamos a adoptar como modelo del target el m6f sinó el m6, el cual no contiene ninguno de los polinomios.
+
+# Interactiones
 ```{r}
-# Interactions
-# 
 m9<-lm(Total_amount ~  f.tlenkm +Fare_amount + f.espeed + Tip_amount + Tolls_amount,data=df)
 summary(m9)
 
@@ -419,6 +415,7 @@ sel2<-which(hatvalues(m9ca)>5*length(m9ca$coefficients)/nrow(df));sel2;length(se
 ll2<-which(row.names(df) %in% names(hatvalues(m9ca)[sel2]));ll2
 sel3<-which(cooks.distance(m9ca)> 0.5 );sel3;length(sel3)
 ll3<-which(row.names(df) %in% names(cooks.distance(m9ca)[sel3]));ll3
+
 
 ```
 ```
