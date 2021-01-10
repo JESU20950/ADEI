@@ -653,6 +653,10 @@ df[l,"distHaversine"]<-0.001
 l<-which(df[,"Tip_amount"]<0)
 df[l,"Tip_amount"]<-0.001
 
+#Tip_amount
+l<-which(df[,"lpep_pickup_time"]>24)
+df[l,"lpep_pickup_time"]<-24
+
 summary(df)
 ```
 

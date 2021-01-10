@@ -92,6 +92,8 @@ fviz_cos2(res.pca, choice = "var", axes = 1:2, top = 10)
 fviz_cos2(res.pca, choice = "var", axes = 3:4, top = 10)
 fviz_cos2(res.pca, choice = "ind", axes = 1:2, top = 10)
 fviz_cos2(res.pca, choice = "ind", axes = 3:4, top = 10)
+summary(df[c("3370", "3064", "3086", "1604", "1426", "1094"),c("tlenkm", "Fare_amount", "distHaversine", "lpep_pickup_time", "traveltime")])
+summary(df[c("4947", "611", "1155", "1008"),c("tlenkm", "Fare_amount", "distHaversine", "lpep_pickup_time", "traveltime")])
 ```
 A partir de la suma del coseno al cuadrado de la primera dimensión más el coseno al cuadrado de la segunda dimensión podemos obtener cualidad de las variables en el primer plano factorial. Como podemos ver tlenkm y distHaversine son las dos variables que mejor se representan el primer plano factorial.
 

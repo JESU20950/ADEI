@@ -673,5 +673,14 @@ count/sum(count)
 fit.AnyTip<-factor(ifelse(predict(m10,type="response")<0.5,0,1),labels=paste("Prediction-AnyTip",c("No","Yes")))
 tt<-table(fit.AnyTip,df1$AnyTip);tt
 100*sum(diag(tt))/sum(tt)
+
+m0<-glm(AnyTip~1, family="binomial", data=dfftest)
+fit0<-predict(m0,type="response")
+fit.AnyTip0<-factor(ifelse(fit0<0.5,0,1),labels=c("fit.Yes"))
+tt0<-table(fit.AnyTip0,dfftest$AnyTip);tt0;sum(tt0)
+100*sum(tt0[1,2])/sum(tt0)
+
+
+
 ```
 Como podemos ver nuestro modelo tiene una precisión del 87.23157. A pesar de todo, no es un modelo totalmente correcto ya que podemos podemos ver como en nuestro dataset hay más individuos con AnyTip Yes que con AnyTip No, por lo tanto nuestro dataset está desbalanceado. Además podemos ver que nuestro modelo tiene una tendencia a predecir siempre que el individuo da propinas, probablemente causado por el desbalance del dataset.
