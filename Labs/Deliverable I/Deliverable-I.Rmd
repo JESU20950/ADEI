@@ -73,25 +73,12 @@ rm(list=ls())
 #filepath<-"C:/Users/carle/Desktop/ADEI2/"
 # green_tripdata_2016-01
 
-setwd("~/Desktop/NYCABS")
-filepath<-"~/Desktop/NYCABS/"
-# green_tripdata_2016-01
+setwd("~/Desktop/ADEI/Labs/Deliverable I")
+filepath<-"~/Desktop/ADEI/Labs/Deliverable I/"
 
-df2<-read.table(paste0(filepath,"green_tripdata_2016-01.csv"),header=T, sep=",")
-#Reload data
-dim(df2)
-names(df2)
-head(df2)
+df<-read.table(paste0(filepath,"green_tripdata_2016-01.csv"),header=T, sep=",")
 ```
 
-## Select a sample of 5000 records
-
-```{r, echo=TRUE, results=FALSE}
-set.seed(02041997)
-sam<-as.vector(sort(sample(1:nrow(df2),5000)))
-df<-df2[sam,]
-summary(df)
-```
 
 ## Some useful functions
 
